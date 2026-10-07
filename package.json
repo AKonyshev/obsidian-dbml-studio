@@ -16,7 +16,7 @@
     "release:github": "bash scripts/release-github.sh",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "jest",
-    "lint": "eslint .",
+    "lint": "eslint . --max-warnings=0",
     "format": "prettier --write .",
     "prepare": "husky"
   },
