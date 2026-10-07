@@ -72,7 +72,7 @@ height: 600
 Lines starting with `#` are comments. A key the block does not know is an
 error shown in the note, not something skipped.
 
-The keys are the MkDocs plugin's (`packages/mkdocs-dbml`), and so is the rule
+The keys are the MkDocs plugin's (DBML Studio's `packages/mkdocs-dbml`), and so is the rule
 for which blocks are diagrams: a block is one only when it has a line
 starting with `model:` and opens — past blank lines and comments — with one
 of the four keys. Anything else, DBML itself included, stays code.
@@ -102,52 +102,72 @@ loads again — about a second.
 
 ## Build from source
 
-From the repository root:
+Needs Node 20.19 or later. From the repository root:
 
 ```bash
-yarn install
-yarn build:web
-yarn build:obsidian
-yarn install:obsidian /path/to/vault
+npm ci
+npm run build
+npm run install:vault -- /path/to/vault
 ```
 
 Then turn the plugin on in Settings → Community plugins, and reload Obsidian
 after every later install.
 
-`build:web` comes first and is not run for you: the plugin's build copies the
-frame out of `packages/web/dist` and fails, naming what is missing, when that
-build is absent or partial. `build:obsidian` vendors the frame into `frame/`
-and then bundles `main.js` with the frame inside it; `build:plugin` alone
-refuses, naming the file, when `frame/` is not there. `install:obsidian`
-refuses when `main.js` is not built, copies `main.js`, `manifest.json` and
-`styles.css` — what the Community plugins directory installs — and removes
-the vault's `frame/`, so the plugin unpacks the one it carries on the next
-start.
+`npm run build` vendors the frame into `frame/` and then bundles `main.js`
+with the frame inside it; `npm run build:plugin` alone refuses, naming the
+file, when `frame/` is not there. `install:vault` refuses when `main.js` is not
+built, copies `main.js`, `manifest.json` and `styles.css` — what the Community
+plugins directory installs — and removes the vault's `frame/`, so the plugin
+unpacks the one it carries on the next start.
 
-The plugin's manifest is the repository root's `manifest.json`, not one in
-this package: the Community plugins directory reads it from there, and
-`versions.json` beside it maps each version to the Obsidian it needs.
+The plugin's manifest is the repository root's `manifest.json`: the Community
+plugins directory reads it from there, and `versions.json` beside it maps each
+version to the Obsidian it needs.
 
 A release package — a zip with a `dbml-studio/` folder inside, to unzip into
-`<vault>/.obsidian/plugins/`:
+`<vault>/.obsidian/plugins/`, written to `dist/`:
 
 ```bash
-yarn build:web && yarn package:obsidian
+npm run package
 ```
 
 Releasing — the tag, the GitHub release and its files — is
-`yarn workspace obsidian-plugin release:github <version>`; see
-`docs/releasing.md`, "The Obsidian plugin".
+`npm run release:github -- <version>`; see `RELEASING.md`.
+
+### The frame
+
+The diagram frame is not built here. It comes from the npm package
+[`dbml-frame`](https://www.npmjs.com/package/dbml-frame), which
+[DBML Studio](https://github.com/AKonyshev/dbml-studio) builds and publishes
+with every release, and this repository pins it to an exact version in
+`package.json`. `npm run build` unpacks the package's frame and its manifest
+into the one document the plugin carries (see "How it works").
+
+To build against a frame that is not published yet — a branch of DBML Studio —
+build the package there, then point this build at it:
+
+```bash
+# in the DBML Studio checkout
+yarn build:web && yarn workspace dbml-frame build
+
+# here
+DBML_FRAME_SOURCE=../dbml-studio/packages/dbml-frame npm run build
+```
+
+`node scripts/vendor-frame.mjs --source <dbml-frame package dir>` does the same
+for the vendoring step alone. A build made that way carries that frame's
+`BUILD`, and is not a release: a release is built from the pinned package.
 
 ## How it works
 
-The plugin is a host, not a second visualizer. `frame/embed.html` is
-`packages/web`'s frame as one self-contained document: `scripts/vendor-frame.mjs`
-walks `packages/web/dist/.vite/manifest.json` by the rule in
-`packages/web/README.md` ("Packaging the frame from the manifest"), bundles
-the frame's chunks into one inline module script with esbuild, and puts the
-stylesheet inline too. The result is about 11.6 MB of HTML and names no other
-file. `frame/BUILD` names the commit it was built from.
+The plugin is a host, not a second visualizer. `frame/embed.html` is DBML
+Studio's frame (the `dbml-frame` package) as one self-contained document:
+`scripts/vendor-frame.mjs` walks the package's `frame/manifest.json` by the
+rule in DBML Studio's `packages/web/README.md` ("Packaging the frame from the
+manifest"), bundles the frame's chunks into one inline module script with
+esbuild, and puts the stylesheet inline too. The result is about 11.6 MB of
+HTML and names no other file. `frame/BUILD` is the package's `BUILD`, which
+names the DBML Studio commit the frame was built from.
 
 `scripts/build-plugin.mjs` then puts both into `main.js` with esbuild's
 `define` — the document gzipped and base64-encoded (about 2.4 MB of
@@ -167,16 +187,17 @@ every external script it names refused (`net::ERR_BLOCKED_BY_CLIENT`, found
 in the live app 2026-09-25). A `blob:` URL would run with the window's own
 origin and `srcdoc` with none, so neither is used. If Obsidian ever starts
 allowing an external script from a `getResourcePath` document, `frame/` could
-go back to the multi-file shape `packages/mkdocs-dbml` vendors — but until
+go back to the multi-file shape DBML Studio's `packages/mkdocs-dbml` vendors — but until
 then the build refuses, naming the chunk, a frame it cannot inline: a dynamic
 import, an emitted asset, `url(` in the CSS, or `</script` / `<!--` in the
 JavaScript.
 
 The plugin reads the model and hands its text to the frame with a `document`
 message of the `dbml-frame` protocol; a theme change travels as `theme`, and
-the frame asks to be expanded with `expand`. The vocabulary is
-`packages/web/src/embed/frameHost.ts`, imported by `src/hostProtocol.ts`, so a
-change to a message there breaks this package's type check. The frame is
+the frame asks to be expanded with `expand`. The vocabulary is DBML Studio's
+`packages/web/src/embed/frameHost.ts`, compiled into `dbml-frame/protocol` and
+imported by `src/hostProtocol.ts`, so a change to a message there breaks this
+repository's type check when `dbml-frame` is bumped. The frame is
 told apart from every other window by identity — the window the plugin
 created — rather than by origin, because the Obsidian window and the frame
 never share one.
@@ -231,20 +252,19 @@ command name — is English, or Russian when Obsidian's own language is
 Russian. The plugin asks Obsidian with `getLanguage()` on load (Obsidian
 restarts to change language). The two catalogs are `src/i18n/locales/en.ts`
 and `ru.ts`, one shape (`src/i18n/catalog.ts`); `src/i18n/locales/` is the one
-path the repository's Cyrillic guard
+path where Cyrillic lives, the way it did in DBML Studio, where a test
 (`packages/json-table-schema-visualizer/src/i18n/__tests__/sourceLanguage.test.ts`)
-excludes from its "no Cyrillic outside a locale file" rule. Everywhere else
-in this package's source stays English.
+enforced it. Everywhere else in this repository's source stays English.
 
 ## Tests
 
 ```bash
-yarn workspace obsidian-plugin test
+npm test
 ```
 
 Jest in jsdom, over the pure modules and the frame's side of the
 conversation; one test spawns `scripts/vendor-frame.mjs` against a fixture
-`dist` and runs the script it inlines. `main.test.ts` runs the plugin itself
+`dbml-frame` package and runs the script it inlines. `main.test.ts` runs the plugin itself
 against a stand-in for the `obsidian` module, which ships types only. The
 wiring into Obsidian — windows, views, scrolling, the theme — is checked by
-hand, against a real vault: `docs/test-cases.md`, section 14.
+hand, against a real vault: DBML Studio's `docs/test-cases.md`, section 14.

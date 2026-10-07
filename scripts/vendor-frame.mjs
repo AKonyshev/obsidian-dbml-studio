@@ -8,7 +8,7 @@
 // 2026-09-25). `blob:` and `srcdoc` would run, but with the window's origin
 // or with none.
 //
-// Which files: the rule DBML Studio states in packages/web/README.md
+// Which files: the rule DBML Studio states in its packages/web/README.md
 // ("Packaging the frame from the manifest"), which its other hosts follow
 // too. The whole graph is walked, although only its entry is handed to
 // esbuild, so that a change in the graph breaks this loudly instead of

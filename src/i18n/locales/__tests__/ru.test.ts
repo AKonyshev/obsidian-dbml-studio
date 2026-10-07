@@ -1,9 +1,9 @@
 import { ru } from "../ru";
 
 // Literal Russian expectations, on purpose: this is the one place in the
-// package the source-language guard lets Cyrillic live
-// (`packages/json-table-schema-visualizer/src/i18n/__tests__/sourceLanguage.test.ts`
-// excludes any path containing `src/i18n/locales/`), so it is the one place a
+// package Cyrillic lives, as in DBML Studio, whose source-language guard
+// (`packages/json-table-schema-visualizer/src/i18n/__tests__/sourceLanguage.test.ts`)
+// excludes any path containing `src/i18n/locales/`, so it is the one place a
 // wording regression in `ru.ts` can actually be caught. `messages.test.ts`
 // only checks that the right catalog entry is picked for each error kind —
 // dispatch, not wording — precisely so the two concerns stay separable: this

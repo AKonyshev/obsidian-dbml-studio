@@ -2,10 +2,10 @@
  * Every string a reader of a note sees, in Russian — what the plugin speaks
  * when Obsidian itself is in Russian (`../language.ts`); `./en.ts` is the
  * English twin, and both have the shape `../catalog.ts` names. It lives under
- * `src/i18n/locales/` because that is the one path the repo-wide guard
- * (`packages/json-table-schema-visualizer/src/i18n/__tests__/
- * sourceLanguage.test.ts`) excludes from its "no Cyrillic outside a locale
- * file" rule: everywhere else in this package's sources stays English, and
+ * `src/i18n/locales/` because that is the one path where Cyrillic lives (DBML
+ * Studio's source-language guard, `packages/json-table-schema-visualizer/src/
+ * i18n/__tests__/sourceLanguage.test.ts`, allows it only there; here it is a
+ * convention, not a test): everywhere else in these sources stays English, and
  * the words a reader actually sees live here, gathered rather than scattered
  * across `messages.ts` and `main.ts`.
  *

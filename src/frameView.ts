@@ -35,7 +35,7 @@ export interface FrameViewOptions {
 
 /**
  * The box every frame sits in — the class the documentation sites' host
- * stylesheet dresses too (`packages/web/src/embed/host/host.css`), so a
+ * stylesheet dresses too (DBML Studio's `packages/web/src/embed/host/host.css`), so a
  * diagram is the same element wherever it is drawn.
  */
 const WRAPPER_CLASS = "dbml-diagram";

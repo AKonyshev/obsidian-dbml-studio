@@ -1,6 +1,6 @@
 /* The box FrameView puts every frame in, and the frame itself. The wrapper's
    class is the one the documentation sites' host stylesheet dresses too
-   (packages/web/src/embed/host/host.css). */
+   (DBML Studio's packages/web/src/embed/host/host.css). */
 .dbml-diagram-frame {
   border: 0;
   display: block;
@@ -17,7 +17,7 @@
    `fixed` — in Obsidian that is the note's workspace leaf, not the window, so
    an expanded diagram covers the note's pane and leaves the rest of the
    workspace in view (docs/test-cases.md, 14.21). The classes are the contract
-   the documentation sites' host keeps too (packages/web/README.md, host.css);
+   the documentation sites' host keeps too (DBML Studio's packages/web/README.md, host.css);
    the layer is Obsidian's own for modals rather than host.css's 1000, so that
    menus, notices and tooltips still open over it. */
 .dbml-diagram--expanded {
