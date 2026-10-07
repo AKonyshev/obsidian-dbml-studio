@@ -3,6 +3,13 @@
 The Obsidian plugin's own history. The version is the root `manifest.json`'s;
 the format is [Keep a Changelog](http://keepachangelog.com/).
 
+## [0.2.4] - 2026-10-07
+
+Nothing changes in the plugin: the same frame, from the same DBML Studio
+build, as in 0.2.3. The plugin now lives in its own repository,
+AKonyshev/obsidian-dbml-studio, and takes the frame from the dbml-frame
+package rather than from the DBML Studio repository.
+
 ## [0.2.3] - 2026-10-07
 
 ### Changed
