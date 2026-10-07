@@ -1,18 +1,17 @@
 #!/usr/bin/env bash
-# Releases the Obsidian plugin on GitHub: the tag Obsidian's Community plugins
-# directory reads, and the release carrying the files Obsidian installs.
+# Tags a release of the Obsidian plugin, once it is checked to build and
+# release cleanly. The tag is what the release workflow
+# (.github/workflows/release.yml) builds, attests and releases on GitHub.
 #
-#   npm run release:github -- 0.2.0            tag, push, release
-#   npm run release:github -- 0.2.0 --check    everything but those
+#   npm run release:github -- 0.2.0            check, build, tag, push the tag
+#   npm run release:github -- 0.2.0 --check    check and build only
 #
 # Run on main once the release commit is merged. The tag is the bare version,
-# as the directory requires, on HEAD, which has to be origin/main. Attached:
-# main.js, manifest.json and styles.css, which Obsidian installs, and the zip
-# for installing by hand.
+# as the directory requires, on HEAD, which has to be origin/main.
 #
-# A pushed tag is public at once and the directory serves the release from it,
-# so the script asks for the version to be typed back first. --check stops
-# after the build and its checks.
+# A pushed tag is public at once and the directory serves the release made
+# from it, so the script asks for the version to be typed back first. --check
+# stops after the build and its checks.
 set -euo pipefail
 
 REPO="AKonyshev/obsidian-dbml-studio"
@@ -29,7 +28,7 @@ for arg in "$@"; do
   case "$arg" in
     --check) CHECK_ONLY=1 ;;
     -h | --help)
-      sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'
+      sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//'
       exit 0
       ;;
     -*)
@@ -49,15 +48,17 @@ done
 if [ -z "$VERSION" ]; then
   usage
 fi
-if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-  echo "the version is x.y.z, exactly the tag the directory reads: not $VERSION" >&2
-  exit 2
-fi
 
 fail() {
   echo "$1" >&2
   exit 1
 }
+
+# The version's form, the manifest, versions.json and the changelog entry:
+# what the release workflow checks again on the tag, with the same script.
+# First, as they need no repository: a version that is not x.y.z is refused
+# before git is asked anything.
+bash "$ROOT/scripts/release-checks.sh" "$VERSION"
 
 cd "$ROOT"
 
@@ -77,111 +78,35 @@ if [ "$(git rev-parse HEAD)" != "$(git rev-parse origin/main)" ]; then
   fail "main is not origin/main; pull or push until they are the same commit"
 fi
 
-# The directory reads the root manifest.json from the default branch and
-# picks a release for an Obsidian version from versions.json beside it.
-MANIFEST_VERSION="$(node -p "require('./manifest.json').version")"
-MIN_APP="$(node -p "require('./manifest.json').minAppVersion")"
-if [ "$MANIFEST_VERSION" != "$VERSION" ]; then
-  fail "manifest.json is at $MANIFEST_VERSION, not $VERSION; the release commit changes it first"
-fi
-LISTED="$(node -p "require('./versions.json')['$VERSION'] ?? ''")"
-if [ -z "$LISTED" ]; then
-  fail "versions.json has no $VERSION; add \"$VERSION\": \"$MIN_APP\""
-fi
-if [ "$LISTED" != "$MIN_APP" ]; then
-  fail "versions.json says $VERSION needs $LISTED, manifest.json says $MIN_APP"
-fi
-
-# The release notes: the version's section of the changelog, without its
-# heading.
-NOTES="$(awk -v v="$VERSION" '
-  index($0, "## [" v "]") == 1 { on = 1; next }
-  on && /^## \[/ { exit }
-  on { print }
-' CHANGELOG.md)"
-if [ -z "$(printf '%s' "$NOTES" | tr -d '[:space:]')" ]; then
-  fail "CHANGELOG.md has no entry for $VERSION"
-fi
-
 if git rev-parse --quiet --verify "refs/tags/$VERSION" > /dev/null; then
   fail "the tag $VERSION already exists here"
 fi
 if [ -n "$(git ls-remote --tags origin "refs/tags/$VERSION")" ]; then
   fail "the tag $VERSION already exists on origin"
 fi
-if [ "$CHECK_ONLY" -eq 0 ] && ! command -v gh > /dev/null; then
-  fail "the GitHub CLI (gh) is needed to create the release"
-fi
 
-# From scratch: the dependencies as locked, then the plugin — the frame
-# vendored out of dbml-frame and packed into main.js — then the zip.
+# From scratch, as the workflow builds it: the dependencies as locked, then
+# the plugin — the frame vendored out of dbml-frame and packed into main.js.
+# What fails here would fail there too, after the tag is public.
 npm ci
-bash scripts/package-obsidian-plugin.sh
-
-MAIN_JS="$ROOT/main.js"
-ZIP="$ROOT/dist/dbml-studio-obsidian-$VERSION.zip"
-
-# What a reader installs is main.js alone, so it has to carry the frame. The
-# BUILD of the frame just vendored, as a string, is the proof it is this one;
-# and a main.js under 1 MB cannot hold an 11.6 MB frame, however well it packs.
-node -e '
-  const fs = require("fs");
-  const [mainJs, buildFile] = process.argv.slice(1);
-  const build = fs.readFileSync(buildFile, "utf8");
-  const code = fs.readFileSync(mainJs, "utf8");
-  if (!code.includes(JSON.stringify(build))) {
-    console.error(`main.js does not carry the frame of build ${build.trim()}`);
-    process.exit(1);
-  }
-  if (code.length < 1000000) {
-    console.error(`main.js is ${code.length} bytes, too small to carry the frame`);
-    process.exit(1);
-  }
-  console.log(`main.js carries frame ${build.trim()} (${code.length} bytes)`);
-' "$MAIN_JS" "$ROOT/frame/BUILD"
-
-# The listing is read whole first: `grep -q` stops at the first match, and
-# under pipefail the SIGPIPE that leaves `unzip` with would fail the check.
-ZIP_LIST="$(unzip -l "$ZIP")"
-if ! grep -q "dbml-studio/main.js" <<< "$ZIP_LIST"; then
-  fail "$ZIP does not hold dbml-studio/main.js"
-fi
+npm run build
+bash scripts/release-checks.sh --built
 
 if [ "$CHECK_ONLY" -eq 1 ]; then
-  echo "$VERSION is ready to release; nothing tagged or released (--check)"
+  echo "$VERSION is ready to release; nothing tagged (--check)"
   exit 0
 fi
 
-printf 'Tag %s on %s, push it and release it on GitHub? The tag is public at once. Type the version to confirm: ' \
+printf 'Tag %s on %s and push it? GitHub Actions then releases it, and the tag is public at once. Type the version to confirm: ' \
   "$VERSION" "$(git rev-parse --short HEAD)"
 read -r answer
 if [ "$answer" != "$VERSION" ]; then
-  echo "not released"
+  echo "not tagged"
   exit 1
 fi
 
 git tag -a "$VERSION" -m "DBML Studio for Obsidian $VERSION"
 git push origin "refs/tags/$VERSION"
 
-NOTES_FILE="$(mktemp)"
-trap 'rm -f "$NOTES_FILE"' EXIT
-printf '%s\n' "$NOTES" > "$NOTES_FILE"
-
-# The tag is pushed by now, so a rerun refuses it. Should the release fail,
-# say how to finish it by hand from the files the build left in place, rather
-# than leave a tag the directory finds no assets under.
-if ! gh release create "$VERSION" \
-  --repo "$REPO" \
-  --verify-tag \
-  --title "DBML Studio for Obsidian $VERSION" \
-  --notes-file "$NOTES_FILE" \
-  "$MAIN_JS" "$ROOT/manifest.json" "$ROOT/styles.css" "$ZIP"; then
-  fail "the tag $VERSION is pushed, but the release was not created. Finish it from the repository root:
-  gh release create $VERSION --repo $REPO --verify-tag \\
-    --title \"DBML Studio for Obsidian $VERSION\" \\
-    --notes-file <the $VERSION section of CHANGELOG.md> \\
-    main.js manifest.json styles.css \\
-    dist/dbml-studio-obsidian-$VERSION.zip"
-fi
-
-echo "released: https://github.com/$REPO/releases/tag/$VERSION"
+echo "tagged $VERSION. GitHub Actions now builds, attests and releases it:
+  https://github.com/$REPO/actions/workflows/release.yml"

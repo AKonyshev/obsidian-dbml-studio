@@ -12,11 +12,11 @@ In Obsidian: **Settings → Community plugins → Browse**, search for
 "DBML Studio", install it and turn it on. Obsidian keeps it up to date from
 there.
 
-By hand, for a version not in the directory yet: every release on GitHub
-(tags `0.2.0` and later) carries `dbml-studio-obsidian-<version>.zip`; unzip it
-into `<vault>/.obsidian/plugins/`, so that the folder
-`<vault>/.obsidian/plugins/dbml-studio/` holds `main.js`, and turn the plugin
-on in **Settings → Community plugins**.
+By hand, for a version not in the directory yet: download `main.js`,
+`manifest.json` and `styles.css` from its release on GitHub into
+`<vault>/.obsidian/plugins/dbml-studio/`, creating the folder, and turn the
+plugin on in **Settings → Community plugins**. The plugin unpacks its diagram
+frame from `main.js` on the first start.
 
 ## What it does outside the note
 
@@ -125,15 +125,17 @@ The plugin's manifest is the repository root's `manifest.json`: the Community
 plugins directory reads it from there, and `versions.json` beside it maps each
 version to the Obsidian it needs.
 
-A release package — a zip with a `dbml-studio/` folder inside, to unzip into
-`<vault>/.obsidian/plugins/`, written to `dist/`:
+A zip for installing by hand — a `dbml-studio/` folder inside, to unzip into
+`<vault>/.obsidian/plugins/`, written to `dist/`. Built locally only; releases
+do not carry it:
 
 ```bash
 npm run package
 ```
 
-Releasing — the tag, the GitHub release and its files — is
-`npm run release:github -- <version>`; see `RELEASING.md`.
+Releasing is `npm run release:github -- <version>`, which checks the release
+and pushes its tag; GitHub Actions then builds, attests and releases it. See
+`RELEASING.md`.
 
 ### The frame
 

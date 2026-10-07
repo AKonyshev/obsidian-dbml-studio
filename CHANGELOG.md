@@ -10,6 +10,9 @@ the format is [Keep a Changelog](http://keepachangelog.com/).
 - The plugin builds to the same `main.js`, byte for byte, on every Node
   version, so the directory's rebuild of a release matches the released file.
   `main.js` is 60 KB larger for it.
+- Releases are built and attested by GitHub Actions, and carry `main.js`,
+  `manifest.json` and `styles.css` only. The zip for installing by hand is no
+  longer attached; download the three files instead.
 
 ## [0.2.4] - 2026-10-07
 
