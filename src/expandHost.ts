@@ -10,8 +10,9 @@ export interface Expandable {
  * At most one diagram expanded in one window at a time.
  *
  * The rule the documentation sites' host keeps (DBML Studio's
- * `packages/web/src/embed/host/main.ts`), for the same reason: a note may carry several diagrams, and the
- * reader can reach the toolbar of one that is already behind another.
+ * `packages/web/src/embed/host/main.ts`), for the same reason: a note may
+ * carry several diagrams, and the reader can reach the toolbar of one that is
+ * already behind another.
  *
  * One window, not the application: an expanded diagram stays inside the window
  * it is drawn in (inside its note's pane, in fact — `styles.css`), so a

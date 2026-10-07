@@ -37,7 +37,7 @@ knowing anyway.
   a site can fetch a model by URL; hosted by the plugin, it is given the
   model in a message instead and requests nothing.
 - **Its own frame, unpacked into its own folder.** The diagram is drawn by a
-  page — `frame/embed.html`, about 11.6 MB — that ships inside `main.js`,
+  page — `frame/embed.html`, about 16.4 MB — that ships inside `main.js`,
   gzipped. On the first start, and after every update, the plugin compares
   `frame/BUILD` in its plugin folder with the build it carries and, when it is
   missing or different, writes `frame/embed.html` and then `frame/BUILD`
@@ -72,7 +72,8 @@ height: 600
 Lines starting with `#` are comments. A key the block does not know is an
 error shown in the note, not something skipped.
 
-The keys are the MkDocs plugin's (DBML Studio's `packages/mkdocs-dbml`), and so is the rule
+The keys are the MkDocs plugin's (DBML Studio's `packages/mkdocs-dbml`), and so
+is the rule
 for which blocks are diagrams: a block is one only when it has a line
 starting with `model:` and opens — past blank lines and comments — with one
 of the four keys. Anything else, DBML itself included, stays code.
@@ -165,13 +166,13 @@ Studio's frame (the `dbml-frame` package) as one self-contained document:
 `scripts/vendor-frame.mjs` walks the package's `frame/manifest.json` by the
 rule in DBML Studio's `packages/web/README.md` ("Packaging the frame from the
 manifest"), bundles the frame's chunks into one inline module script with
-esbuild, and puts the stylesheet inline too. The result is about 11.6 MB of
+esbuild, and puts the stylesheet inline too. The result is about 16.4 MB of
 HTML and names no other file. `frame/BUILD` is the package's `BUILD`, which
 names the DBML Studio commit the frame was built from.
 
 `scripts/build-plugin.mjs` then puts both into `main.js` with esbuild's
-`define` — the document gzipped and base64-encoded (about 2.4 MB of
-`main.js`), `BUILD` as it is — and refuses to build when `frame/` is not
+`define` — the document gzipped and base64-encoded (about 3.8 MB of
+`main.js`, which is 3.9 MB in all), `BUILD` as it is — and refuses to build when `frame/` is not
 there. The directory installs `main.js`, `manifest.json` and `styles.css` and
 nothing else, so the frame travels the only way it can. On load,
 `src/frameArchive.ts` compares the plugin folder's `frame/BUILD` with the
@@ -187,7 +188,8 @@ every external script it names refused (`net::ERR_BLOCKED_BY_CLIENT`, found
 in the live app 2026-09-25). A `blob:` URL would run with the window's own
 origin and `srcdoc` with none, so neither is used. If Obsidian ever starts
 allowing an external script from a `getResourcePath` document, `frame/` could
-go back to the multi-file shape DBML Studio's `packages/mkdocs-dbml` vendors — but until
+go back to the multi-file shape DBML Studio's `packages/mkdocs-dbml` vendors —
+but until
 then the build refuses, naming the chunk, a frame it cannot inline: a dynamic
 import, an emitted asset, `url(` in the CSS, or `</script` / `<!--` in the
 JavaScript.
@@ -234,7 +236,7 @@ window's `Function` constructor, which speaks as that window whoever calls it.
 
 A frame loads only when its block first comes on screen. Obsidian renders
 every block twice while a note is open — reading view, and the Live Preview
-editor it keeps hidden — and each frame is the 11.6 MB document above, some
+editor it keeps hidden — and each frame is the 16.4 MB document above, some
 70 MB once running. The frame element is placed at its full height at once,
 but gets its `src` from an `IntersectionObserver` of the block's own window,
 so the hidden copy never loads. The model sent before then waits for the

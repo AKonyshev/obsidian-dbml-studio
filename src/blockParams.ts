@@ -12,7 +12,8 @@ export interface BlockParams {
 
 /**
  * The first thing wrong with a block that is ours, by the same rules the
- * MkDocs plugin's YAML load enforces (`packages/mkdocs-dbml/src/mkdocs_dbml/block.py`):
+ * MkDocs plugin's YAML load enforces (DBML Studio's
+ * `packages/mkdocs-dbml/src/mkdocs_dbml/block.py`):
  * - `modelMissing` — no `model:` value, or a blank one.
  * - `modelNotAPath` — `model:` given a list or a mapping instead of a path.
  * - `unknownKey` — a key that is not `model`, `tables`, `height` or `theme`
@@ -52,12 +53,12 @@ const isFrameTheme = (value: string): value is FrameTheme =>
 
 /**
  * Which ```dbml blocks are diagrams, by the rule the MkDocs plugin keeps
- * (`packages/mkdocs-dbml/src/mkdocs_dbml/block.py`): a line that starts with
- * `model:`, and a block that opens — past blank lines and `#` comments — with
- * one of the four keys. DBML has no such top-level line, so a block of DBML
- * code stays code, even when a multi-line note inside it has a line that
- * starts with `model:`. One rule for both hosts, or the same block is a diagram
- * in a note and code on a page.
+ * (DBML Studio's `packages/mkdocs-dbml/src/mkdocs_dbml/block.py`): a line that
+ * starts with `model:`, and a block that opens — past blank lines and `#`
+ * comments — with one of the four keys. DBML has no such top-level line, so a
+ * block of DBML code stays code, even when a multi-line note inside it has a
+ * line that starts with `model:`. One rule for both hosts, or the same block is
+ * a diagram in a note and code on a page.
  */
 const MODEL_LINE = /^model\s*:/m;
 const OPENS_WITH_KEY = new RegExp(`^(?:${BLOCK_KEYS.join("|")})\\s*:`);

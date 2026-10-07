@@ -8,8 +8,8 @@ import { type Catalog } from "./i18n/catalog";
  * The wording itself lives in `./i18n/locales/` — this only picks which entry
  * answers which kind of error. Everything inside the frame — a broken model, a
  * table that is not there — is the frame's to say
- * (DBML Studio's `packages/web/src/embed/embedError.ts`), and is not repeated here: two
- * places writing the text of one error drift apart within a month.
+ * (DBML Studio's `packages/web/src/embed/embedError.ts`), and is not repeated
+ * here: two places writing the text of one error drift apart within a month.
  */
 export interface Messages {
   blockErrorText: (error: BlockError) => string;
