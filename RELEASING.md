@@ -20,9 +20,9 @@ files:
 
 - `manifest.json`: `version`.
 - `versions.json`: the same version, mapped to `minAppVersion`.
-- `CHANGELOG.md`: the version's entry, under `## [<version>] - <date>`. The
-  release's notes are this section, so write it for a reader of the release
-  page.
+- `CHANGELOG.md`: the version's entry, under `## [<version>] - <date>`: the
+  `## [Unreleased]` heading renamed to it, when there is one. The release's
+  notes are this section, so write it for a reader of the release page.
 
 **The tag is the bare version** — `0.2.4`, not `v0.2.4` — because the directory
 looks the release up by the manifest's version.
@@ -56,9 +56,10 @@ runs too); unless the tree is clean, on `main`, and the same commit as
 frame from a local checkout. It then installs the dependencies as locked
 (`npm ci`), builds the plugin (`npm run build`), and checks the frame it just
 vendored is the installed package's (`frame/BUILD` against the package's
-`BUILD`), that `main.js` carries it — by that `BUILD` string — and is not too
-small to. With `--check` it stops there. Otherwise it asks for the version to be typed back, creates the
-annotated tag `<version>` on `HEAD`, which is the merge commit, and pushes it.
+`BUILD`), that `main.js` carries it — by that `BUILD` string — and is not
+too small to. With `--check` it stops there. Otherwise it asks for the
+version to be typed back, creates the annotated tag `<version>` on `HEAD`,
+which is the merge commit, and pushes it.
 
 Run `--check` first, always: a pushed tag is public at once and the directory
 serves the release made from it.

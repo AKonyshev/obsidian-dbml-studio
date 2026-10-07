@@ -26,9 +26,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # The whole history, so that origin/main is there to check against.
+      # No credentials left in .git/config: nothing below pushes, and the
+      # token, which may write to the repository, would otherwise be readable
+      # by every dependency's install script and every test. gh reads its own
+      # token from GH_TOKEN.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       # A release is of a commit main has: a tag pushed on a branch's commit
       # would release code no pull request merged.
@@ -39,10 +44,12 @@ jobs:
             exit 1
           fi
 
+      # No dependency cache: a tag's run could only restore one saved by the
+      # same tag or by main, where nothing runs, and a release job should not
+      # build from files another run left behind.
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: .nvmrc
-          cache: npm
 
       - run: npm ci
       - run: npm run lint

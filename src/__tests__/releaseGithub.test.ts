@@ -328,6 +328,25 @@ describe("release-github.sh, before it builds anything", () => {
     expect(result.stderr).toContain("DBML_FRAME_SOURCE is set");
   });
 
+  // As for scripts/vendor-frame.mjs, an empty one names no source. Off main,
+  // so that the refusal after it stops the script before any build.
+  it("takes an empty DBML_FRAME_SOURCE for unset", () => {
+    const repo = makeRepo();
+
+    git(repo, "checkout", "--quiet", "-b", "feature");
+
+    const result = releaseWith(
+      { DBML_FRAME_SOURCE: "" },
+      repo,
+      "0.2.0",
+      "--check",
+    );
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).not.toContain("DBML_FRAME_SOURCE");
+    expect(result.stderr).toContain("release from main, not from feature");
+  });
+
   // The release is the workflow's now: the script tags, and attaches nothing.
   it("creates no release and builds no zip", () => {
     const script = readFileSync(SCRIPT, "utf8");
@@ -515,16 +534,50 @@ describe("the release workflow", () => {
     ]);
   });
 
+  const PLUGIN_FILES = ["main.js", "manifest.json", "styles.css"];
+
   // The directory installs these three and reports any other file on a
   // release as unsupported: the zip it once carried among them.
   it("attaches main.js, manifest.json and styles.css, and nothing else", () => {
     const create = /gh release create[^\n]*(?:\n {10}[^\n]*)*/.exec(workflow);
+    const command = create?.[0].replace(/\s+/g, " ").trim() ?? "";
+    const files = command.split(" --notes-file notes.md ")[1]?.split(" ");
 
-    expect(create).not.toBeNull();
-    expect(create?.[0].replace(/\s+/g, " ").trim()).toMatch(
-      / --notes-file notes\.md main\.js manifest\.json styles\.css$/,
-    );
+    expect(files).toEqual(PLUGIN_FILES);
     expect(workflow).not.toContain(".zip");
+  });
+
+  // The directory asks for an attestation on each file it installs: a file
+  // released but not attested is reported as missing one.
+  it("attests exactly the files it releases", () => {
+    const lines = workflow.split("\n");
+    const start = lines.findIndex((line) => line.trim() === "subject-path: |");
+    const indent = start === -1 ? 0 : lines[start].search(/\S/);
+    const paths: string[] = [];
+
+    for (const line of start === -1 ? [] : lines.slice(start + 1)) {
+      if (line.trim() === "" || line.search(/\S/) <= indent) break;
+      paths.push(line.trim());
+    }
+
+    expect(paths).toEqual(PLUGIN_FILES);
+  });
+
+  // The main-only guard needs origin/main in the checkout, which only the
+  // whole history brings; without it every release would be refused.
+  it("refuses a tag whose commit is not on main", () => {
+    expect(workflow).toContain("fetch-depth: 0");
+    expect(workflow).toContain(
+      'git merge-base --is-ancestor "$GITHUB_SHA" origin/main',
+    );
+  });
+
+  // The token may write to the repository; left in .git/config, every
+  // install script and test could use it. And a release builds from what it
+  // installs itself, not from another run's cache.
+  it("leaves no credentials in the checkout and restores no cache", () => {
+    expect(workflow).toContain("persist-credentials: false");
+    expect(workflow).not.toMatch(/^\s*cache:/m);
   });
 
   // The repository's releases are all the plugin's, so unlike in the

@@ -12,7 +12,8 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { gunzipSync } from "node:zlib";
+
+import { unpackFrame } from "../frameArchive";
 
 const SCRIPT = path.join(__dirname, "..", "..", "scripts", "build-plugin.mjs");
 
@@ -45,11 +46,12 @@ const makeFrame = (files: Record<string, string>): string => {
 const build = (
   frame: string,
   outfile = path.join(work, "main.js"),
+  cwd = process.cwd(),
 ): SpawnSyncReturns<string> =>
   spawnSync(
     process.execPath,
     [SCRIPT, "--frame", frame, "--outfile", outfile],
-    { encoding: "utf8" },
+    { encoding: "utf8", cwd },
   );
 
 /** The gzipped frame main.js carries, as the base64 text it is written in. */
@@ -60,7 +62,9 @@ const packedFrame = (bundle: string): string =>
 describe("build-plugin.mjs", () => {
   // The Community plugins directory installs main.js, manifest.json and
   // styles.css: a frame that is not inside main.js is not installed at all.
-  it("carries the frame inside main.js, gzipped", () => {
+  // Unpacked by the plugin's own code, with the DecompressionStream Node has
+  // as Obsidian's Chromium does: what fflate packs is what the plugin reads.
+  it("carries the frame inside main.js, gzipped", async () => {
     const result = build(makeFrame({ "embed.html": HTML, BUILD }));
 
     expect(result.status).toBe(0);
@@ -70,9 +74,7 @@ describe("build-plugin.mjs", () => {
     );
 
     expect(packed).not.toBe("");
-    expect(gunzipSync(Buffer.from(packed, "base64")).toString("utf8")).toBe(
-      HTML,
-    );
+    await expect(unpackFrame(packed)).resolves.toBe(HTML);
   });
 
   // The directory rebuilds main.js from the tagged source, on a Node of its
@@ -94,6 +96,20 @@ describe("build-plugin.mjs", () => {
     expect(createHash("sha256").update(packed).digest("hex")).toBe(
       "fda33fcf008ebe93e4aa0af60896ec0cc8b3b62ec614b8cf22df46ef685ba1c4",
     );
+  });
+
+  // esbuild names modules by their paths from the working directory; the
+  // build pins that to the repository, so where it is run from is no input.
+  it("builds the same bytes from any working directory", () => {
+    const frame = makeFrame({ "embed.html": HTML, BUILD });
+    const fromRoot = path.join(work, "root.js");
+    const fromElsewhere = path.join(work, "elsewhere.js");
+
+    expect(
+      build(frame, fromRoot, path.join(__dirname, "..", "..")).status,
+    ).toBe(0);
+    expect(build(frame, fromElsewhere, work).status).toBe(0);
+    expect(readFileSync(fromElsewhere)).toEqual(readFileSync(fromRoot));
   });
 
   it("carries the frame's BUILD exactly as written", () => {

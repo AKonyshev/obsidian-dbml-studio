@@ -61,7 +61,12 @@ const packed = Buffer.from(
 // `obsidian` is provided by the application at run time, and the Node builtins
 // resolve inside Electron: bundling either one produces a plugin that fails to
 // load with no message anywhere.
+//
+// `absWorkingDir`: esbuild names the bundled modules by their paths relative
+// to the working directory, in keys and comments of main.js, so without it a
+// build run from another folder is other bytes.
 await build({
+  absWorkingDir: root,
   entryPoints: [path.join(root, "src/main.ts")],
   outfile,
   bundle: true,

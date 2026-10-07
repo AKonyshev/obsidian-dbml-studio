@@ -57,8 +57,8 @@ fail() {
 # DBML_FRAME_SOURCE builds the plugin around a frame from a local checkout of
 # DBML Studio (README, "The frame"): a frame nobody else can rebuild from this
 # repository, and not the one the workflow will release. The build below
-# would pick it up.
-if [ -n "${DBML_FRAME_SOURCE+set}" ]; then
+# would pick it up. Empty counts as unset, as scripts/vendor-frame.mjs reads it.
+if [ -n "${DBML_FRAME_SOURCE:-}" ]; then
   fail "DBML_FRAME_SOURCE is set ($DBML_FRAME_SOURCE); a release is built from the pinned dbml-frame package. Unset it first"
 fi
 
