@@ -14,9 +14,9 @@
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { gzipSync } from "node:zlib";
 
 import { build } from "esbuild";
+import { gzipSync } from "fflate";
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -42,11 +42,21 @@ for (const file of [htmlPath, buildPath]) {
   }
 }
 
+// fflate, not node:zlib, because the Community plugins directory rebuilds the
+// plugin from the tagged source and compares its main.js with the released
+// one byte for byte. node:zlib deflates with the zlib its Node was built with
+// (or a distribution's system zlib), and the same frame packs to other bytes
+// on Node 18 than on Node 20 and 22. fflate is JavaScript, so it gives the
+// same bytes on every Node and OS; the output is still standard gzip, which
+// the plugin unpacks with the browser's own DecompressionStream.
+//
 // Level 9: built once, unpacked once per update, and every byte saved is a
-// byte less of main.js for Obsidian to parse on each start.
-const packed = gzipSync(readFileSync(htmlPath), { level: 9 }).toString(
-  "base64",
-);
+// byte less of main.js for Obsidian to parse on each start. `mtime: 0`
+// because fflate otherwise stamps the gzip header with the current time, and
+// two builds a second apart would differ.
+const packed = Buffer.from(
+  gzipSync(readFileSync(htmlPath), { level: 9, mtime: 0 }),
+).toString("base64");
 
 // `obsidian` is provided by the application at run time, and the Node builtins
 // resolve inside Electron: bundling either one produces a plugin that fails to

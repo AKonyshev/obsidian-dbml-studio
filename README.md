@@ -171,10 +171,13 @@ HTML and names no other file. `frame/BUILD` is the package's `BUILD`, which
 names the DBML Studio commit the frame was built from.
 
 `scripts/build-plugin.mjs` then puts both into `main.js` with esbuild's
-`define` — the document gzipped and base64-encoded (about 3.8 MB of
-`main.js`, which is 3.9 MB in all), `BUILD` as it is — and refuses to build when `frame/` is not
-there. The directory installs `main.js`, `manifest.json` and `styles.css` and
-nothing else, so the frame travels the only way it can. On load,
+`define` — the document gzipped and base64-encoded (nearly all of `main.js`,
+which is 3.9 MB), `BUILD` as it is — and refuses to build when `frame/` is not
+there. It gzips with `fflate` rather than Node's own zlib, whose output
+depends on the zlib a Node was built with: the directory rebuilds `main.js` and
+compares it with the released one, so it has to come out the same bytes on
+every Node and OS. The directory installs `main.js`, `manifest.json` and
+`styles.css` and nothing else, so the frame travels the only way it can. On load,
 `src/frameArchive.ts` compares the plugin folder's `frame/BUILD` with the
 carried one and, when it is missing or different, unpacks the document with
 the browser's own `DecompressionStream` and writes it through the vault
