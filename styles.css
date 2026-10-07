@@ -43,6 +43,21 @@
   height: 100%;
 }
 
+/* Between an expanded diagram and its note's pane (src/frameView.ts). Live
+   Preview draws a block inside an element with `contain: paint`, which would
+   make that element, not the pane, the box `fixed` fills: the block, with no
+   height once the diagram is out of its flow, so the diagram disappeared.
+   Obsidian sets that one with `!important` and the selector
+   `.markdown-source-view.mod-cm6 .cm-content > [contenteditable="false"]`, so
+   the second selector here is the same one made more specific by the class;
+   the first covers any other containment on the way. */
+.dbml-diagram-uncontained,
+.markdown-source-view.mod-cm6
+  .cm-content
+  > [contenteditable="false"].dbml-diagram-uncontained {
+  contain: none !important;
+}
+
 html.dbml-diagram-host--locked,
 html.dbml-diagram-host--locked body {
   overflow: hidden;

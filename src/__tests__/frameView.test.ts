@@ -336,6 +336,41 @@ describe("FrameView, expanding", () => {
       "*",
     );
   });
+  // Live Preview draws a block inside an element with `contain: paint`, and
+  // such an element, not the note's pane, is what a `position: fixed` box
+  // inside it fills — the block, which has no height once the diagram leaves
+  // its flow. Every element between the diagram and the pane gives that up
+  // while the diagram is expanded, and only then.
+  it("lifts the containment between it and the note's pane while expanded", () => {
+    const leaf = createDiv({ cls: "workspace-leaf" });
+    const scroller = leaf.createDiv({ cls: "cm-scroller" });
+    const block = scroller.createDiv({ cls: "cm-embed-block" });
+
+    document.body.append(leaf);
+
+    const { view } = setup({ container: block });
+    const lifted = (): Element[] => [
+      ...document.querySelectorAll(".dbml-diagram-uncontained"),
+    ];
+
+    view.setExpanded(true);
+
+    expect(lifted()).toEqual([scroller, block]);
+
+    view.setExpanded(false);
+
+    expect(lifted()).toEqual([]);
+  });
+
+  it("lifts nothing outside a note's pane", () => {
+    const { view } = setup();
+
+    view.setExpanded(true);
+
+    expect(document.querySelectorAll(".dbml-diagram-uncontained")).toHaveLength(
+      0,
+    );
+  });
 });
 
 // Obsidian runs the plugin in its main window, and a note opened in a popout
