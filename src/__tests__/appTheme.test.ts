@@ -2,7 +2,7 @@ import { followAppTheme, themeOf, type ThemedDiagram } from "../appTheme";
 
 describe("themeOf", () => {
   it("reads the class Obsidian puts on the body", () => {
-    const body = document.createElement("body");
+    const body = createEl("body");
 
     body.className = "theme-dark";
     expect(themeOf(body)).toBe("dark");
@@ -12,7 +12,7 @@ describe("themeOf", () => {
   });
 
   it("calls anything else light", () => {
-    expect(themeOf(document.createElement("body"))).toBe("light");
+    expect(themeOf(createEl("body"))).toBe("light");
   });
 });
 
@@ -26,9 +26,7 @@ describe("followAppTheme", () => {
     pinnedTheme: ThemedDiagram["pinnedTheme"];
     view: { wrapper: HTMLElement; setTheme: jest.Mock };
   } => {
-    const wrapper = doc.createElement("div");
-
-    doc.body.append(wrapper);
+    const wrapper = doc.body.createDiv();
 
     return { pinnedTheme, view: { wrapper, setTheme: jest.fn() } };
   };
@@ -42,7 +40,7 @@ describe("followAppTheme", () => {
   };
 
   it("gives a diagram in a popout the main window's theme, not its own body's", () => {
-    const main = document.createElement("body");
+    const main = createEl("body");
 
     main.className = "theme-dark";
 
@@ -54,7 +52,7 @@ describe("followAppTheme", () => {
   });
 
   it("gives every unpinned diagram the theme, and leaves a pinned one alone", () => {
-    const main = document.createElement("body");
+    const main = createEl("body");
 
     main.className = "theme-light";
 

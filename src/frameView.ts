@@ -75,8 +75,9 @@ const posterFor = (owner: typeof window): Poster =>
  * this object created, and a document only ever goes to that window — the
  * same rule the frame keeps from its side (`isFromHost` in `frameHost.ts`).
  *
- * Standard DOM only, through the container's own document: nothing here needs
- * Obsidian's element helpers, and without them this runs in a test.
+ * The elements come from Obsidian's helpers on the container, which draw them
+ * in the container's own document; a test gives jsdom the same helpers
+ * (`testSupport/obsidianDom.ts`).
  */
 export class FrameView {
   readonly wrapper: HTMLDivElement;
@@ -104,15 +105,6 @@ export class FrameView {
   }: FrameViewOptions) {
     const doc = container.ownerDocument;
 
-    this.wrapper = doc.createElement("div");
-    this.wrapper.className = WRAPPER_CLASS;
-
-    this.element = doc.createElement("iframe");
-    this.element.className = FRAME_CLASS;
-    this.element.width = "100%";
-    this.element.height = String(height);
-    this.element.title = title;
-
     this.url = url;
     this.theme = theme;
     this.messageTarget = messageTarget;
@@ -124,12 +116,18 @@ export class FrameView {
       this.receive(event);
     };
 
-    // Listening before the frame is in the document: it says hello the
-    // moment its script runs.
+    // Listening before the frame exists: it says hello the moment its script
+    // runs.
     messageTarget.addEventListener("message", this.onMessage);
 
-    this.wrapper.append(this.element);
-    container.append(this.wrapper);
+    // Made in the container, which puts them in the container's own document,
+    // popout window or not. The frame has no `src` yet (see `loadWhenSeen`),
+    // so it is not loading while it is already in the note.
+    this.wrapper = container.createDiv({ cls: WRAPPER_CLASS });
+    this.element = this.wrapper.createEl("iframe", {
+      cls: FRAME_CLASS,
+      attr: { width: "100%", height: String(height), title },
+    });
 
     this.loadWhenSeen();
   }

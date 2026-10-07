@@ -17,19 +17,30 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "jest",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "prepare": "husky"
   },
   "dependencies": {
     "dbml-frame": "1.2.2"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.5",
     "@types/jest": "^30.0.0",
     "@types/node": "^22.20.5",
     "esbuild": "0.28.2",
+    "eslint": "^9.39.5",
+    "eslint-config-love": "^155.0.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-import-x": "^4.17.1",
+    "eslint-plugin-obsidianmd": "^0.4.2",
+    "globals": "^17.13.0",
+    "husky": "^9.1.7",
     "jest": "^30.5.2",
     "jest-environment-jsdom": "^30.5.2",
     "obsidian": "1.13.1",
+    "prettier": "^3.9.9",
     "ts-jest": "^29.4.14",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.71.1"
   }
 }

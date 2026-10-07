@@ -2,7 +2,7 @@ import { ExpandHosts } from "../expandHost";
 import { FrameView } from "../frameView";
 import { moveDiagram, type MovableDiagram } from "../moveDiagram";
 
-type AppWindow = Window & typeof globalThis;
+type AppWindow = typeof window;
 
 const HELLO = { source: "dbml-frame", type: "hello" };
 const LOCKED = "dbml-diagram-host--locked";
@@ -17,7 +17,7 @@ const messageFrom = (source: Window, data: unknown): MessageEvent => {
 
 /** A second window: a jsdom frame's, which has a realm of its own. */
 const otherWindow = (): AppWindow => {
-  const holder = document.createElement("iframe");
+  const holder = createEl("iframe");
 
   document.body.append(holder);
 
@@ -34,7 +34,7 @@ const diagramIn = (
   hosts: ExpandHosts,
   pinnedTheme: MovableDiagram["pinnedTheme"] = null,
 ): MovableDiagram => {
-  const container = document.createElement("div");
+  const container = createDiv();
 
   document.body.append(container);
 
@@ -87,7 +87,7 @@ const move = (
 };
 
 const appBody = (theme: string): HTMLElement => {
-  const body = document.createElement("body");
+  const body = createEl("body");
 
   body.className = `theme-${theme}`;
 

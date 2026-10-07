@@ -50,7 +50,7 @@ const pressEscape = (doc: Document, key = "Escape"): boolean => {
 
 describe("ExpandHost", () => {
   it("expands one and locks the window behind it", () => {
-    const root = document.createElement("div");
+    const root = createDiv();
     const host = newHost(root);
     const view = fakeView();
 
@@ -63,7 +63,7 @@ describe("ExpandHost", () => {
   // A note may carry several diagrams, and the reader can reach the toolbar of
   // one that is behind another.
   it("puts the first back when a second one expands", () => {
-    const root = document.createElement("div");
+    const root = createDiv();
     const host = newHost(root);
     const first = fakeView();
     const second = fakeView();
@@ -79,7 +79,7 @@ describe("ExpandHost", () => {
   // The frame asks again if the reader presses its button twice before the
   // answer arrives: the second ask changes nothing, and one collapse is enough.
   it("takes a second request from the expanded one as the first", () => {
-    const root = document.createElement("div");
+    const root = createDiv();
     const host = newHost(root);
     const view = fakeView();
 
@@ -93,7 +93,7 @@ describe("ExpandHost", () => {
   });
 
   it("unlocks the window when the expanded one goes back", () => {
-    const root = document.createElement("div");
+    const root = createDiv();
     const host = newHost(root);
     const view = fakeView();
 
@@ -105,7 +105,7 @@ describe("ExpandHost", () => {
   });
 
   it("ignores a request to go back from one that is not expanded", () => {
-    const root = document.createElement("div");
+    const root = createDiv();
     const host = newHost(root);
     const expanded = fakeView();
     const other = fakeView();
@@ -120,7 +120,7 @@ describe("ExpandHost", () => {
   // Obsidian re-renders blocks on every edit: another block going away must
   // not put back the diagram the reader is looking at.
   it("leaves the expanded one alone when another diagram is released", () => {
-    const root = document.createElement("div");
+    const root = createDiv();
     const host = newHost(root);
     const expanded = fakeView();
     const other = fakeView();
@@ -133,7 +133,7 @@ describe("ExpandHost", () => {
   });
 
   it("puts back and unlocks when the expanded one is released", () => {
-    const root = document.createElement("div");
+    const root = createDiv();
     const host = newHost(root);
     const view = fakeView();
 
@@ -146,7 +146,7 @@ describe("ExpandHost", () => {
 
   // The window's Escape handler claims the key only when this says so.
   it("says whether collapsing found anything to collapse", () => {
-    const root = document.createElement("div");
+    const root = createDiv();
     const host = newHost(root);
     const view = fakeView();
 

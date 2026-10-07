@@ -8,6 +8,8 @@ module.exports = {
   // test that spawns a script asks for Node itself, in its own docblock.
   testEnvironment: "jsdom",
   roots: ["<rootDir>/src"],
+  // Obsidian's element helpers on the window the tests run in.
+  setupFiles: ["<rootDir>/src/testSupport/installObsidianDom.ts"],
   // What scripts/build-plugin.mjs puts into main.js with esbuild's `define`
   // (src/globals.d.ts): a frame of a build of its own, packed the same way.
   globals: {

@@ -355,7 +355,9 @@ describe("vendor-frame.mjs", () => {
   };
 
   const isolatedEnv = (): NodeJS.ProcessEnv => {
-    const { DBML_FRAME_SOURCE: _source, ...env } = process.env;
+    const env = { ...process.env };
+
+    delete env.DBML_FRAME_SOURCE;
 
     return env;
   };

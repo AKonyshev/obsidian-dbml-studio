@@ -17,12 +17,12 @@ interface Rig {
   container: HTMLElement;
   view: FrameView;
   frameWindow: Window;
-  post: jest.SpyInstance;
+  post: jest.SpyInstance<void, [message: unknown, targetOrigin: string]>;
   greet: () => void;
 }
 
 const setup = (overrides: Partial<FrameViewOptions> = {}): Rig => {
-  const container = document.createElement("div");
+  const container = createDiv();
 
   document.body.append(container);
 
@@ -44,7 +44,7 @@ const setup = (overrides: Partial<FrameViewOptions> = {}): Rig => {
 
   const post = jest
     .spyOn(frameWindow, "postMessage")
-    .mockImplementation(() => undefined);
+    .mockImplementation(() => undefined) as unknown as Rig["post"];
 
   const greet = (): void => {
     window.dispatchEvent(messageFrom(frameWindow, HELLO));
@@ -345,7 +345,10 @@ describe("FrameView, expanding", () => {
 // frame's parent window's own `Function` posts as that window.
 describe("FrameView, posting as the frame's parent window", () => {
   it("posts every message through a poster built by its container's window", () => {
-    const poster = jest.fn();
+    const poster = jest.fn<
+      undefined,
+      [target: Window, message: { type: string }]
+    >();
     const construct = jest
       .spyOn(window, "Function")
       .mockImplementation(() => poster as never);
@@ -513,11 +516,11 @@ describe("FrameView, loading when first seen", () => {
 
   it("watches for being seen in the window it was moved to", () => {
     const { view } = setup({ url: FRAME_URL });
-    const holder = document.createElement("iframe");
+    const holder = createEl("iframe");
 
     document.body.append(holder);
 
-    const win = holder.contentWindow as Window & typeof globalThis;
+    const win = holder.contentWindow as typeof window;
 
     Object.defineProperty(win, "IntersectionObserver", {
       configurable: true,
@@ -570,7 +573,7 @@ describe("FrameView, loading when first seen", () => {
 // Dragging a note's tab into another window moves the block's elements there
 // without rendering the block again, and the frame reloads in the new window.
 describe("FrameView.moveTo", () => {
-  type AppWindow = Window & typeof globalThis;
+  type AppWindow = typeof window;
 
   const DOC = {
     text: "Table a { id int }",
@@ -580,7 +583,7 @@ describe("FrameView.moveTo", () => {
 
   /** A second window: a jsdom frame's, which has a realm of its own. */
   const otherWindow = (): AppWindow => {
-    const holder = document.createElement("iframe");
+    const holder = createEl("iframe");
 
     document.body.append(holder);
 
@@ -646,7 +649,10 @@ describe("FrameView.moveTo", () => {
   it("posts as its new window", () => {
     const { view } = setup();
     const win = otherWindow();
-    const poster = jest.fn();
+    const poster = jest.fn<
+      undefined,
+      [target: Window, message: { type: string }]
+    >();
     const construct = jest
       .spyOn(win, "Function")
       .mockImplementation(() => poster as never);

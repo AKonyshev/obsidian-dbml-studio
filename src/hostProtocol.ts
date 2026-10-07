@@ -13,10 +13,10 @@ import { type FrameTheme } from "./blockParams";
  * The vocabulary is DBML Studio's `frameHost.ts`, shipped compiled in
  * `dbml-frame` and imported rather than restated, at an exact version: a
  * message shape changed there should fail to compile here, on the upgrade
- * PR, not fail silently in a note. What is not reused is the page's own host, `host/main.ts` beside
- * it: that one checks `event.origin` against its own and posts to `"/"`, both
- * of which assume the page and the frame share an origin — and an Obsidian
- * window never shares one with a frame it created.
+ * PR, not fail silently in a note. What is not reused is the page's own host,
+ * `host/main.ts` beside it: that one checks `event.origin` against its own
+ * and posts to `"/"`, both of which assume the page and the frame share an
+ * origin — and an Obsidian window never shares one with a frame it created.
  */
 export type { FrameMessage, HostMessage };
 

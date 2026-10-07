@@ -1,7 +1,7 @@
 import { renderBlockCode, renderBlockError } from "../blockFallback";
 
 const container = (): HTMLElement => {
-  const element = document.createElement("div");
+  const element = createDiv();
 
   document.body.append(element);
 

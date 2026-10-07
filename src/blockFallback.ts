@@ -12,11 +12,8 @@ export const renderBlockError = (
   container: HTMLElement,
   message: string,
 ): void => {
-  const box = container.ownerDocument.createElement("div");
-
-  box.className = ERROR_CLASS;
-  box.textContent = message;
-  container.replaceChildren(box);
+  container.replaceChildren();
+  container.createDiv({ cls: ERROR_CLASS, text: message });
 };
 
 /**
@@ -31,13 +28,9 @@ export const renderBlockCode = (
   container: HTMLElement,
   source: string,
 ): void => {
-  const doc = container.ownerDocument;
-  const pre = doc.createElement("pre");
-  const code = doc.createElement("code");
+  container.replaceChildren();
 
-  pre.className = "language-dbml";
-  code.className = "language-dbml";
-  code.textContent = source;
-  pre.append(code);
-  container.replaceChildren(pre);
+  const pre = container.createEl("pre", { cls: "language-dbml" });
+
+  pre.createEl("code", { cls: "language-dbml", text: source });
 };

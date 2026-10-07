@@ -1,3 +1,4 @@
+/* global DBML_FRAME_BUILD, DBML_FRAME_GZIP -- put in by the `globals` of jest.config.js (src/globals.d.ts) */
 import { existsSync } from "node:fs";
 import {
   mkdir,
@@ -26,6 +27,7 @@ import DbmlStudioPlugin from "../main";
 import { en } from "../i18n/locales/en";
 import { ru } from "../i18n/locales/ru";
 import { messagesFor } from "../messages";
+import { installObsidianDom } from "../testSupport/obsidianDom";
 
 import type * as PathModule from "node:path";
 import type * as FsPromisesModule from "node:fs/promises";
@@ -144,33 +146,9 @@ interface Rendered {
   migrationHooks: Set<(win: Window) => unknown>;
 }
 
-/**
- * What Obsidian adds to every node of a window: `doc` and `win`, the document
- * and window the node belongs to. A window has a `Node` of its own, so each
- * window a test draws in gets them.
- */
-const giveNodeHelpers = (win: Window): void => {
-  const { Node: WindowNode } = win as Window & typeof globalThis;
-
-  Object.defineProperties(WindowNode.prototype, {
-    doc: {
-      configurable: true,
-      get(this: Node) {
-        return this.ownerDocument;
-      },
-    },
-    win: {
-      configurable: true,
-      get(this: Node) {
-        return this.ownerDocument?.defaultView;
-      },
-    },
-  });
-};
-
 /** A popout window: a jsdom frame's, which has a document and realm of its own. */
 const popout = (): Window => {
-  const holder = document.createElement("iframe");
+  const holder = createEl("iframe");
 
   document.body.append(holder);
 
@@ -180,7 +158,7 @@ const popout = (): Window => {
     throw new Error("jsdom gave the popout no window");
   }
 
-  giveNodeHelpers(win);
+  installObsidianDom(win);
 
   return win;
 };
@@ -193,10 +171,9 @@ const Adapter = FileSystemAdapter as unknown as {
 };
 
 beforeAll(() => {
-  giveNodeHelpers(window);
   // jsdom has neither; Obsidian's Chromium has both. These are Node's own
   // implementations of the same web APIs, not stand-ins.
-  Object.assign(globalThis, { DecompressionStream, TextDecoder });
+  Object.assign(window, { DecompressionStream, TextDecoder });
 });
 
 beforeEach(async () => {
@@ -265,10 +242,9 @@ const render = async (
     throw new Error("the plugin registered no dbml processor");
   }
 
-  const element = win.document.createElement("div");
+  const element = win.document.body.createDiv();
   const migrationHooks = new Set<(win: Window) => unknown>();
 
-  win.document.body.append(element);
   Object.assign(element, {
     onWindowMigrated: (listener: (win: Window) => unknown) => {
       migrationHooks.add(listener);
@@ -305,7 +281,7 @@ const runCommand = async (
 
 /** Lets every promise already settled run its callbacks, and timers fire. */
 const settle = async (): Promise<void> => {
-  await new Promise((resolve) => setTimeout(resolve, 20));
+  await new Promise((resolve) => window.setTimeout(resolve, 20));
 };
 
 describe("the frame the plugin carries", () => {

@@ -9,7 +9,8 @@
 // or with none.
 //
 // Which files: the rule DBML Studio states in packages/web/README.md
-// ("Packaging the frame from the manifest"), which its other hosts follow too. The whole graph is walked, although only its entry is handed to
+// ("Packaging the frame from the manifest"), which its other hosts follow
+// too. The whole graph is walked, although only its entry is handed to
 // esbuild, so that a change in the graph breaks this loudly instead of
 // shipping a frame that does not draw.
 //
@@ -229,6 +230,6 @@ writeFileSync(path.join(out, "embed.html"), frame);
 
 writeFileSync(path.join(out, "BUILD"), `${buildId}\n`);
 
-console.log(
-  `vendor-frame: ${scripts.length} scripts and ${styles.length} stylesheets into ${path.join(out, "embed.html")} (${buildId})`,
+process.stdout.write(
+  `vendor-frame: ${scripts.length} scripts and ${styles.length} stylesheets into ${path.join(out, "embed.html")} (${buildId})\n`,
 );

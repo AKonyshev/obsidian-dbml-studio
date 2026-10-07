@@ -67,7 +67,9 @@ const memoryFiles = (
   };
 };
 
-const FOLDER = ".obsidian/plugins/dbml-studio/frame";
+// Not `.obsidian`: the folder is whatever the user configured, which the
+// plugin takes from its manifest and never spells out.
+const FOLDER = "settings/plugins/dbml-studio/frame";
 const HTML_PATH = `${FOLDER}/embed.html`;
 const BUILD_PATH = `${FOLDER}/BUILD`;
 
