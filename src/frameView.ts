@@ -43,6 +43,17 @@ const WRAPPER_CLASS = "dbml-diagram";
 const FRAME_CLASS = "dbml-diagram-frame";
 const EXPANDED_CLASS = "dbml-diagram--expanded";
 
+/**
+ * On every element between an expanded diagram and its note's pane: lifts the
+ * element's CSS containment (`styles.css`). Live Preview draws a block inside
+ * an element with `contain: paint`, and an element with containment, not the
+ * pane, is what a `position: fixed` box inside it fills — there, the block,
+ * which has no height left once the diagram is out of its flow.
+ */
+const UNCONTAINED_CLASS = "dbml-diagram-uncontained";
+/** The note's pane: the box an expanded diagram is meant to fill. */
+const PANE_SELECTOR = ".workspace-leaf";
+
 type Poster = (target: Window, message: HostMessage) => void;
 
 /**
@@ -92,6 +103,7 @@ export class FrameView {
   private observer: IntersectionObserver | null = null;
   private readonly onMessage: (event: MessageEvent) => void;
   private readonly onExpand: ((expanded: boolean) => void) | undefined;
+  private uncontained: HTMLElement[] = [];
   private pending: FrameDocument | null = null;
   private greeted = false;
 
@@ -214,7 +226,36 @@ export class FrameView {
    */
   setExpanded(expanded: boolean): void {
     this.wrapper.classList.toggle(EXPANDED_CLASS, expanded);
+    this.liftContainment(expanded);
     this.send(expandedMessage(expanded));
+  }
+
+  /**
+   * Marked from the diagram up to its pane, exclusive, and only those: the
+   * elements are remembered rather than looked up again, because by the time
+   * the diagram is put back Obsidian may have moved it. Outside a pane
+   * nothing is marked — there is nothing it is meant to fill.
+   */
+  private liftContainment(lift: boolean): void {
+    for (const element of this.uncontained) {
+      element.classList.remove(UNCONTAINED_CLASS);
+    }
+    this.uncontained = [];
+
+    const pane = lift ? this.wrapper.closest(PANE_SELECTOR) : null;
+
+    if (pane === null) {
+      return;
+    }
+
+    for (
+      let element = this.wrapper.parentElement;
+      element !== null && element !== pane;
+      element = element.parentElement
+    ) {
+      element.classList.add(UNCONTAINED_CLASS);
+      this.uncontained.push(element);
+    }
   }
 
   destroy(): void {
