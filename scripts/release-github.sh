@@ -54,6 +54,14 @@ fail() {
   exit 1
 }
 
+# DBML_FRAME_SOURCE builds the plugin around a frame from a local checkout of
+# DBML Studio (README, "The frame"): a frame nobody else can rebuild from this
+# repository, and not the one the workflow will release. The build below
+# would pick it up.
+if [ -n "${DBML_FRAME_SOURCE+set}" ]; then
+  fail "DBML_FRAME_SOURCE is set ($DBML_FRAME_SOURCE); a release is built from the pinned dbml-frame package. Unset it first"
+fi
+
 # The version's form, the manifest, versions.json and the changelog entry:
 # what the release workflow checks again on the tag, with the same script.
 # First, as they need no repository: a version that is not x.y.z is refused

@@ -51,11 +51,13 @@ The script (`scripts/release-github.sh`) refuses unless `manifest.json` is at
 `<version>`, `versions.json` lists it with the manifest's `minAppVersion`, and
 the changelog has its entry (`scripts/release-checks.sh`, which the workflow
 runs too); unless the tree is clean, on `main`, and the same commit as
-`origin/main`; and when the tag exists already, here or on `origin`. It then
-installs the dependencies as locked (`npm ci`), builds the plugin
-(`npm run build`), and checks `main.js` carries the frame it just vendored — by
-the frame's `BUILD` string — and is not too small to. With `--check` it stops
-there. Otherwise it asks for the version to be typed back, creates the
+`origin/main`; when the tag exists already, here or on `origin`; and when
+`DBML_FRAME_SOURCE` is set, as a release ships the pinned `dbml-frame`, not a
+frame from a local checkout. It then installs the dependencies as locked
+(`npm ci`), builds the plugin (`npm run build`), and checks the frame it just
+vendored is the installed package's (`frame/BUILD` against the package's
+`BUILD`), that `main.js` carries it — by that `BUILD` string — and is not too
+small to. With `--check` it stops there. Otherwise it asks for the version to be typed back, creates the
 annotated tag `<version>` on `HEAD`, which is the merge commit, and pushes it.
 
 Run `--check` first, always: a pushed tag is public at once and the directory

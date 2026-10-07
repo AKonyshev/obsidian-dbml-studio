@@ -80,7 +80,9 @@ const isolatedEnv = (): NodeJS.ProcessEnv => {
   const env: NodeJS.ProcessEnv = {};
 
   for (const [name, value] of Object.entries(process.env)) {
-    if (!name.startsWith("GIT_")) {
+    // And a frame from a local checkout, should the shell running the tests
+    // name one: the script refuses to release with it.
+    if (!name.startsWith("GIT_") && name !== "DBML_FRAME_SOURCE") {
       env[name] = value;
     }
   }
@@ -167,7 +169,8 @@ const looseScript = (): string => {
   return path.join(scripts, "release-github.sh");
 };
 
-const release = (
+const releaseWith = (
+  extraEnv: NodeJS.ProcessEnv,
   repo: string | null,
   ...args: string[]
 ): SpawnSyncReturns<string> =>
@@ -179,8 +182,13 @@ const release = (
         : path.join(repo, "scripts", "release-github.sh"),
       ...args,
     ],
-    { encoding: "utf8", input: "", env: isolatedEnv() },
+    { encoding: "utf8", input: "", env: { ...isolatedEnv(), ...extraEnv } },
   );
+
+const release = (
+  repo: string | null,
+  ...args: string[]
+): SpawnSyncReturns<string> => releaseWith({}, repo, ...args);
 
 describe("release-github.sh, its arguments", () => {
   it("says how it is used with --help, and does nothing", () => {
@@ -305,6 +313,21 @@ describe("release-github.sh, before it builds anything", () => {
     expect(result.stderr).toContain("already");
   });
 
+  // A frame from a local checkout of DBML Studio is for trying out; what is
+  // released is the pinned package's, which the workflow rebuilds.
+  it("refuses to release with DBML_FRAME_SOURCE set", () => {
+    const repo = makeRepo();
+    const result = releaseWith(
+      { DBML_FRAME_SOURCE: path.join(work, "dbml-studio") },
+      repo,
+      "0.2.0",
+      "--check",
+    );
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("DBML_FRAME_SOURCE is set");
+  });
+
   // The release is the workflow's now: the script tags, and attaches nothing.
   it("creates no release and builds no zip", () => {
     const script = readFileSync(SCRIPT, "utf8");
@@ -376,12 +399,30 @@ describe("release-checks.sh, a version", () => {
 describe("release-checks.sh --built", () => {
   const FRAME_BUILD = "v1.2.3-4-gabc1234\n";
 
-  /** A main.js of `size` bytes, carrying the frame's BUILD or not. */
-  const built = (size: number, carriesBuild: boolean): string => {
+  /**
+   * A main.js of `size` bytes, carrying the frame's BUILD or not, beside an
+   * installed dbml-frame whose BUILD is `packageBuild` (none when null).
+   */
+  const built = (
+    size: number,
+    carriesBuild: boolean,
+    packageBuild: string | null = FRAME_BUILD,
+  ): string => {
     const dir = checksDir();
     const head = carriesBuild
       ? `var DBML_FRAME_BUILD = ${JSON.stringify(FRAME_BUILD)};\n`
       : 'var DBML_FRAME_BUILD = "another";\n';
+
+    if (packageBuild !== null) {
+      const pkg = path.join(dir, "node_modules", "dbml-frame");
+
+      mkdirSync(pkg, { recursive: true });
+      writeFileSync(
+        path.join(pkg, "package.json"),
+        JSON.stringify({ name: "dbml-frame", version: "1.2.3" }),
+      );
+      writeFileSync(path.join(pkg, "BUILD"), packageBuild);
+    }
 
     mkdirSync(path.join(dir, "frame"));
     writeFileSync(path.join(dir, "frame", "BUILD"), FRAME_BUILD);
@@ -415,6 +456,27 @@ describe("release-checks.sh --built", () => {
     expect(result.stderr).toContain(
       "main.js does not carry the frame of build v1.2.3-4-gabc1234",
     );
+  });
+
+  // DBML_FRAME_SOURCE vendors a frame from a local checkout; its BUILD is
+  // not the pinned package's, and a release does not ship it.
+  it("refuses a frame that is not the installed dbml-frame's", () => {
+    const result = checks(
+      built(2_000_000, true, "v9.9.9-1-gfeed123\n"),
+      "--built",
+    );
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain(
+      "frame/BUILD is v1.2.3-4-gabc1234, but the installed dbml-frame is v9.9.9-1-gfeed123",
+    );
+  });
+
+  it("refuses when dbml-frame is not installed", () => {
+    const result = checks(built(2_000_000, true, null), "--built");
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("dbml-frame is not installed");
   });
 
   it("refuses, naming it, a main.js not built", () => {

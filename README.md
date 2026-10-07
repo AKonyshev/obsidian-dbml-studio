@@ -13,10 +13,13 @@ In Obsidian: **Settings → Community plugins → Browse**, search for
 there.
 
 By hand, for a version not in the directory yet: download `main.js`,
-`manifest.json` and `styles.css` from its release on GitHub into
-`<vault>/.obsidian/plugins/dbml-studio/`, creating the folder, and turn the
-plugin on in **Settings → Community plugins**. The plugin unpacks its diagram
-frame from `main.js` on the first start.
+`manifest.json` and `styles.css` from its release in this repository (`0.2.4`
+and later) into `<vault>/.obsidian/plugins/dbml-studio/`, creating the folder,
+and turn the plugin on in **Settings → Community plugins**. The plugin unpacks
+its diagram frame from `main.js` on the first start. Versions `0.2.0` to
+`0.2.3` were released from DBML Studio's repository, before the plugin moved
+here: they are among
+[its releases](https://github.com/AKonyshev/dbml-studio/releases).
 
 ## What it does outside the note
 
@@ -159,7 +162,8 @@ DBML_FRAME_SOURCE=../dbml-studio/packages/dbml-frame npm run build
 
 `node scripts/vendor-frame.mjs --source <dbml-frame package dir>` does the same
 for the vendoring step alone. A build made that way carries that frame's
-`BUILD`, and is not a release: a release is built from the pinned package.
+`BUILD`, and is not a release: a release is built from the pinned package,
+and `npm run release:github` refuses while `DBML_FRAME_SOURCE` is set.
 
 ## How it works
 

@@ -11,8 +11,8 @@
 # its entry. --notes writes that entry, without its heading, to <file>: the
 # release's notes.
 #
-# --built: main.js, as just built, carries the frame just vendored. Run after
-# `npm run build`.
+# --built: main.js, as just built, carries the frame just vendored, and that
+# frame is the installed dbml-frame package's. Run after `npm run build`.
 #
 # Reads only the repository this script is in, and changes nothing but the
 # notes file.
@@ -32,7 +32,13 @@ fail() {
 
 # What a reader installs is main.js alone, so it has to carry the frame. The
 # BUILD of the frame just vendored, as a string, is the proof it is this one;
-# and a main.js under 1 MB cannot hold a 16 MB frame, however well it packs.
+# and a main.js under 1 MB cannot hold a 16.4 MB frame, however well it packs.
+#
+# And the frame has to be the pinned package's. DBML_FRAME_SOURCE vendors one
+# from a local checkout of DBML Studio, which is for trying a frame out, not
+# for releasing it: frame/BUILD has to be the BUILD of the dbml-frame that
+# package.json pins and `npm ci` installed, found the way
+# scripts/vendor-frame.mjs finds it.
 check_built() {
   local main_js="$ROOT/main.js" build_file="$ROOT/frame/BUILD"
 
@@ -44,8 +50,32 @@ check_built() {
 
   node -e '
     const fs = require("fs");
-    const [mainJs, buildFile] = process.argv.slice(1);
+    const path = require("path");
+    const [root, mainJs, buildFile] = process.argv.slice(1);
     const build = fs.readFileSync(buildFile, "utf8");
+    let packageDir;
+    try {
+      packageDir = path.dirname(
+        require.resolve("dbml-frame/package.json", { paths: [root] }),
+      );
+    } catch {
+      console.error("dbml-frame is not installed. Install the dependencies: npm ci");
+      process.exit(1);
+    }
+    const packageBuildFile = path.join(packageDir, "BUILD");
+    if (!fs.existsSync(packageBuildFile)) {
+      console.error(`no ${packageBuildFile}: not a dbml-frame package. Install the dependencies: npm ci`);
+      process.exit(1);
+    }
+    const packageBuild = fs.readFileSync(packageBuildFile, "utf8").trim();
+    if (build.trim() !== packageBuild) {
+      console.error(
+        `frame/BUILD is ${build.trim()}, but the installed dbml-frame is ${packageBuild}: ` +
+          "the frame was vendored from somewhere else (DBML_FRAME_SOURCE?). " +
+          "Build it from the package: npm run build, with DBML_FRAME_SOURCE unset",
+      );
+      process.exit(1);
+    }
     const code = fs.readFileSync(mainJs, "utf8");
     const size = fs.statSync(mainJs).size;
     if (!code.includes(JSON.stringify(build))) {
@@ -57,7 +87,7 @@ check_built() {
       process.exit(1);
     }
     console.log(`main.js carries frame ${build.trim()} (${size} bytes)`);
-  ' "$main_js" "$build_file"
+  ' "$ROOT" "$main_js" "$build_file"
 }
 
 VERSION=""
