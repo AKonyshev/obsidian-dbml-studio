@@ -40,27 +40,51 @@ const option = (name, fallback) => {
   return index === -1 ? fallback : path.resolve(process.argv[index + 1]);
 };
 
-// The package, not a checkout of the site: the frame is whatever dbml-frame
-// was installed at, and DBML_FRAME_SOURCE points at another build of it.
-const source = option(
-  "--source",
-  process.env.DBML_FRAME_SOURCE
-    ? path.resolve(process.env.DBML_FRAME_SOURCE)
-    : path.dirname(require.resolve("dbml-frame/package.json")),
-);
-const dist = path.join(source, "frame");
-const out = option("--out", path.join(packageRoot, "frame"));
-
 const fail = (message) => {
   console.error(`vendor-frame: ${message}`);
   process.exit(1);
 };
+
+// The package, not a checkout of the site: the frame is whatever dbml-frame
+// was installed at, and DBML_FRAME_SOURCE points at another build of it. The
+// package is looked up only when neither names a source, so that one which is
+// not installed fails with the way to get it, not with a resolver's trace.
+const defaultSource = () => {
+  if (process.env.DBML_FRAME_SOURCE) {
+    return path.resolve(process.env.DBML_FRAME_SOURCE);
+  }
+  try {
+    return path.dirname(require.resolve("dbml-frame/package.json"));
+  } catch {
+    return fail(
+      "dbml-frame is not installed. Install the dependencies: npm ci",
+    );
+  }
+};
+const sourceArg = process.argv.indexOf("--source");
+const source =
+  sourceArg === -1
+    ? defaultSource()
+    : path.resolve(process.argv[sourceArg + 1]);
+const dist = path.join(source, "frame");
+const out = option("--out", path.join(packageRoot, "frame"));
 
 const manifestPath = path.join(dist, "manifest.json");
 if (!existsSync(manifestPath)) {
   fail(`no ${manifestPath}. Install the dependencies: npm ci`);
 }
 const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+
+// The frame is named after the package it came from, not after this
+// repository's own history, which says nothing about the frame. Checked here,
+// with the manifest, so a refusal leaves the output as it was.
+const buildPath = path.join(source, "BUILD");
+if (!existsSync(buildPath)) {
+  fail(
+    `no ${buildPath}: not a dbml-frame package. Install the dependencies: npm ci`,
+  );
+}
+const buildId = readFileSync(buildPath, "utf8").trim();
 
 const entry = manifest["embed.html"];
 if (entry === undefined) {
@@ -203,15 +227,6 @@ rmSync(out, { recursive: true, force: true });
 mkdirSync(out, { recursive: true });
 writeFileSync(path.join(out, "embed.html"), frame);
 
-// The frame is named after the package it came from, not after this
-// repository's own history, which says nothing about the frame.
-const buildPath = path.join(source, "BUILD");
-if (!existsSync(buildPath)) {
-  fail(
-    `no ${buildPath}: not a dbml-frame package. Install the dependencies: npm ci`,
-  );
-}
-const buildId = readFileSync(buildPath, "utf8").trim();
 writeFileSync(path.join(out, "BUILD"), `${buildId}\n`);
 
 console.log(

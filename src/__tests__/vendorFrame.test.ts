@@ -3,12 +3,14 @@
  */
 import { spawnSync, type SpawnSyncReturns } from "node:child_process";
 import {
+  copyFileSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
   readdirSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -314,13 +316,14 @@ describe("vendor-frame.mjs", () => {
     expect(readFileSync(path.join(out, "BUILD"), "utf8")).toBe("v9.9.9-test\n");
   });
 
-  it("refuses a source without BUILD", () => {
-    const result = vendor(
-      makeSource({ build: null }),
-      path.join(work, "frame"),
-    );
+  it("refuses a source without BUILD, before writing anything", () => {
+    const out = path.join(work, "frame");
+    const result = vendor(makeSource({ build: null }), out);
+
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("BUILD");
+    expect(result.stderr).toContain("npm ci");
+    expect(existsSync(path.join(out, "embed.html"))).toBe(false);
   });
 
   it("takes its source from DBML_FRAME_SOURCE when no --source is given", () => {
@@ -332,6 +335,54 @@ describe("vendor-frame.mjs", () => {
     });
     expect(result.status).toBe(0);
     expect(readFileSync(path.join(out, "BUILD"), "utf8")).toBe("v9.9.9-test\n");
+  });
+
+  // The script run from a folder that has esbuild and no dbml-frame, as in a
+  // checkout where `npm ci` has not been run. Not NODE_PATH: it does not apply
+  // to ES module imports.
+  const withoutFramePackage = (): string => {
+    const home = path.join(work, "bare");
+
+    mkdirSync(path.join(home, "scripts"), { recursive: true });
+    mkdirSync(path.join(home, "node_modules"));
+    copyFileSync(SCRIPT, path.join(home, "scripts", "vendor-frame.mjs"));
+    symlinkSync(
+      path.dirname(require.resolve("esbuild/package.json")),
+      path.join(home, "node_modules", "esbuild"),
+    );
+
+    return path.join(home, "scripts", "vendor-frame.mjs");
+  };
+
+  const isolatedEnv = (): NodeJS.ProcessEnv => {
+    const { DBML_FRAME_SOURCE: _source, ...env } = process.env;
+
+    return env;
+  };
+
+  it("does not look for the package when it is given a source", () => {
+    const out = path.join(work, "frame");
+    const result = spawnSync(
+      process.execPath,
+      [withoutFramePackage(), "--source", makeSource(), "--out", out],
+      { encoding: "utf8", env: isolatedEnv() },
+    );
+
+    expect(result.stderr).toBe("");
+    expect(result.status).toBe(0);
+  });
+
+  it("without the package, says to install it, with no stack trace", () => {
+    const result = spawnSync(
+      process.execPath,
+      [withoutFramePackage(), "--out", path.join(work, "frame")],
+      { encoding: "utf8", env: isolatedEnv() },
+    );
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("dbml-frame");
+    expect(result.stderr).toContain("npm ci");
+    expect(result.stderr).not.toContain("    at ");
   });
 
   it("leaves nothing of an earlier run behind", () => {
