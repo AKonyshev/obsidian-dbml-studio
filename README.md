@@ -269,4 +269,4 @@ conversation; one test spawns `scripts/vendor-frame.mjs` against a fixture
 `dbml-frame` package and runs the script it inlines. `main.test.ts` runs the plugin itself
 against a stand-in for the `obsidian` module, which ships types only. The
 wiring into Obsidian — windows, views, scrolling, the theme — is checked by
-hand, against a real vault: DBML Studio's `docs/test-cases.md`, section 14.
+hand, against a real vault: `docs/test-cases.md`.
