@@ -7,8 +7,8 @@
 // as it is, through esbuild's `define` (src/globals.d.ts). On load the plugin
 // writes them back into its folder (src/frameArchive.ts).
 //
-// Refuses, naming the file, a frame/ that is not there: run `yarn build:web`,
-// then `yarn build:obsidian`, which vendors the frame before it bundles.
+// Refuses, naming the file, a frame/ that is not there: `npm run build`
+// vendors the frame before it bundles.
 //
 //   node scripts/build-plugin.mjs [--frame <dir>] [--outfile <file>]
 import { existsSync, readFileSync } from "node:fs";
@@ -38,10 +38,7 @@ const buildPath = path.join(frame, "BUILD");
 
 for (const file of [htmlPath, buildPath]) {
   if (!existsSync(file)) {
-    fail(
-      `no ${file}. The frame is vendored first: run \`yarn build:web\`, ` +
-        "then `yarn build:obsidian`",
-    );
+    fail(`no ${file}. The frame is vendored first: run \`npm run build\``);
   }
 }
 

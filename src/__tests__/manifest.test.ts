@@ -8,7 +8,7 @@ import path from "node:path";
 // repository's default branch, and Obsidian picks the release to install for
 // an app version from versions.json beside it. Both are the plugin's, though
 // they sit at the repository root: the directory decides where, not us.
-const ROOT = path.join(__dirname, "..", "..", "..", "..");
+const ROOT = path.join(__dirname, "..", "..");
 
 const readJson = (name: string): Record<string, unknown> | null => {
   const file = path.join(ROOT, name);
@@ -22,11 +22,8 @@ const manifest = readJson("manifest.json");
 const versions = readJson("versions.json");
 
 describe("the plugin's manifest", () => {
-  it("is the only one, at the repository root", () => {
+  it("is at the repository root", () => {
     expect(manifest).not.toBeNull();
-    expect(
-      existsSync(path.join(ROOT, "packages/obsidian-plugin/manifest.json")),
-    ).toBe(false);
   });
 
   // The directory's rule: a plugin id may not contain "obsidian".

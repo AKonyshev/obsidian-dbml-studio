@@ -1,5 +1,6 @@
 // Builds the frame Obsidian can load — one self-contained frame/embed.html,
-// its JavaScript and CSS inline — out of packages/web/dist.
+// its JavaScript and CSS inline — out of the dbml-frame package (its frame/,
+// frame/manifest.json and BUILD).
 //
 // Why one file: a document served from the plugin folder through
 // `getResourcePath` runs inline scripts, but Obsidian refuses every external
@@ -7,9 +8,8 @@
 // 2026-09-25). `blob:` and `srcdoc` would run, but with the window's origin
 // or with none.
 //
-// Which files: the rule packages/web/README.md states ("Packaging the frame
-// from the manifest"), which packages/mkdocs-dbml/scripts/vendor.mjs follows
-// too. The whole graph is walked, although only its entry is handed to
+// Which files: the rule DBML Studio states in packages/web/README.md
+// ("Packaging the frame from the manifest"), which its other hosts follow too. The whole graph is walked, although only its entry is handed to
 // esbuild, so that a change in the graph breaks this loudly instead of
 // shipping a frame that does not draw.
 //
@@ -18,7 +18,6 @@
 // the CSS (the same), `</script` or `<!--` in the JS (either would end or bend
 // an inline script), and any `src=` or `href=` left in the document. Empties
 // the output first, so nothing of an earlier run rides along.
-import { execFileSync } from "node:child_process";
 import {
   existsSync,
   mkdirSync,
@@ -26,11 +25,13 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
+import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { build } from "esbuild";
 
+const require = createRequire(import.meta.url);
 const here = path.dirname(fileURLToPath(import.meta.url));
 const packageRoot = path.join(here, "..");
 
@@ -39,7 +40,15 @@ const option = (name, fallback) => {
   return index === -1 ? fallback : path.resolve(process.argv[index + 1]);
 };
 
-const dist = option("--dist", path.join(packageRoot, "..", "web", "dist"));
+// The package, not a checkout of the site: the frame is whatever dbml-frame
+// was installed at, and DBML_FRAME_SOURCE points at another build of it.
+const source = option(
+  "--source",
+  process.env.DBML_FRAME_SOURCE
+    ? path.resolve(process.env.DBML_FRAME_SOURCE)
+    : path.dirname(require.resolve("dbml-frame/package.json")),
+);
+const dist = path.join(source, "frame");
 const out = option("--out", path.join(packageRoot, "frame"));
 
 const fail = (message) => {
@@ -47,9 +56,9 @@ const fail = (message) => {
   process.exit(1);
 };
 
-const manifestPath = path.join(dist, ".vite", "manifest.json");
+const manifestPath = path.join(dist, "manifest.json");
 if (!existsSync(manifestPath)) {
-  fail(`no ${manifestPath}. Build the site first: yarn build:web`);
+  fail(`no ${manifestPath}. Install the dependencies: npm ci`);
 }
 const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
 
@@ -91,7 +100,9 @@ const missing = ["embed.html", ...scripts, ...styles].filter(
   (file) => !existsSync(path.join(dist, file)),
 );
 if (missing.length > 0) {
-  fail(`${dist} is missing ${missing.join(", ")}. Rebuild it: yarn build:web`);
+  fail(
+    `${dist} is missing ${missing.join(", ")}. Reinstall dbml-frame: npm ci`,
+  );
 }
 
 // Either would end an inline script early, or put the HTML parser into a
@@ -192,22 +203,15 @@ rmSync(out, { recursive: true, force: true });
 mkdirSync(out, { recursive: true });
 writeFileSync(path.join(out, "embed.html"), frame);
 
-let buildId = "unknown";
-try {
-  // `--match "v*"`: the frame is the site's, named after the repository's own
-  // tags — not the nearest plugin tag (`mkdocs-dbml-v…`, or the Obsidian
-  // plugin's bare `0.2.0`), which would read as the frame's version.
-  buildId = execFileSync(
-    "git",
-    ["describe", "--always", "--dirty", "--tags", "--match", "v*"],
-    {
-      cwd: packageRoot,
-      encoding: "utf8",
-    },
-  ).trim();
-} catch {
-  // Not a checkout: the frame is still right, only unnamed.
+// The frame is named after the package it came from, not after this
+// repository's own history, which says nothing about the frame.
+const buildPath = path.join(source, "BUILD");
+if (!existsSync(buildPath)) {
+  fail(
+    `no ${buildPath}: not a dbml-frame package. Install the dependencies: npm ci`,
+  );
 }
+const buildId = readFileSync(buildPath, "utf8").trim();
 writeFileSync(path.join(out, "BUILD"), `${buildId}\n`);
 
 console.log(

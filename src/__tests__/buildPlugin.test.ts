@@ -79,7 +79,7 @@ describe("build-plugin.mjs", () => {
 
     expect(result.status).toBe(1);
     expect(result.stderr).toContain(path.join(work, "frame", "embed.html"));
-    expect(result.stderr).toContain("yarn build:web");
+    expect(result.stderr).toContain("npm run build");
   });
 
   it("refuses a frame without its BUILD, by name", () => {

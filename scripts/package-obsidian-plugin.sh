@@ -1,18 +1,17 @@
 #!/usr/bin/env bash
-# Builds the Obsidian plugin and writes a zip to the root dist/, beside the
-# extension's .vsix and the MkDocs plugin's wheel. Inside is one folder,
+# Builds the Obsidian plugin and writes a zip to dist/. Inside is one folder,
 # dbml-studio/, holding exactly what Obsidian reads from a plugin folder:
 # unzipped into <vault>/.obsidian/plugins/ it is installed.
 #
-# Does not build the site: the plugin's own build copies the frame out of
-# packages/web/dist and refuses one that is missing anything. Run
-# `yarn build:web` first.
+# Needs no site build: the frame comes from the dbml-frame package, which the
+# plugin's own build vendors and refuses when it is missing anything. Run
+# `npm ci` first.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-SRC="$ROOT/packages/obsidian-plugin"
+SRC="$ROOT"
 
-yarn workspace obsidian-plugin build
+(cd "$ROOT" && npm run build)
 
 VERSION="$(node -p "require('$ROOT/manifest.json').version")"
 ARTIFACT="$ROOT/dist/dbml-studio-obsidian-$VERSION.zip"

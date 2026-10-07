@@ -2,7 +2,7 @@ import {
   FRAME_PROTOCOL,
   type FrameMessage,
   type HostMessage,
-} from "web/src/embed/frameHost";
+} from "dbml-frame/protocol";
 
 import { type FrameTheme } from "./blockParams";
 
@@ -10,10 +10,10 @@ import { type FrameTheme } from "./blockParams";
  * The host's half of the conversation with a DBML frame, for a host that is
  * not a web page.
  *
- * The vocabulary is `packages/web/src/embed/frameHost.ts`'s, imported rather
- * than restated: the frame and this plugin live in one repository, and a
- * message shape changed there should fail to compile here, not fail silently
- * in a note. What is not reused is the page's own host, `host/main.ts` beside
+ * The vocabulary is DBML Studio's `frameHost.ts`, shipped compiled in
+ * `dbml-frame` and imported rather than restated, at an exact version: a
+ * message shape changed there should fail to compile here, on the upgrade
+ * PR, not fail silently in a note. What is not reused is the page's own host, `host/main.ts` beside
  * it: that one checks `event.origin` against its own and posts to `"/"`, both
  * of which assume the page and the frame share an origin — and an Obsidian
  * window never shares one with a frame it created.

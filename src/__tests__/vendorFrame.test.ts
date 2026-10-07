@@ -18,9 +18,9 @@ import { runInNewContext } from "node:vm";
 const SCRIPT = path.join(__dirname, "..", "..", "scripts", "vendor-frame.mjs");
 
 /**
- * A built `packages/web/dist` in miniature, shaped like the real one: the
- * frame's entry imports one chunk, which carries the stylesheet; the site's
- * own entry reaches an editor chunk nobody else does.
+ * The `dbml-frame` package's manifest in miniature, shaped like the real one:
+ * the frame's entry imports one chunk, which carries the stylesheet; the
+ * site's own entry reaches an editor chunk nobody else does.
  */
 const MANIFEST = {
   "embed.html": {
@@ -72,10 +72,11 @@ const FILES: Record<string, string> = {
   "assets/monaco-G.js": "MONACO_MARKER;\n",
 };
 
-interface DistOptions {
+interface SourceOptions {
   manifest?: Record<string, unknown> | null;
   files?: Record<string, string>;
   skip?: string[];
+  build?: string | null;
 }
 
 let work = "";
@@ -88,16 +89,17 @@ afterEach(() => {
   rmSync(work, { recursive: true, force: true });
 });
 
-const makeDist = (options: DistOptions = {}): string => {
-  const dist = path.join(work, "dist");
+/** A `dbml-frame` package in miniature: `frame/` and the `BUILD` beside it. */
+const makeSource = (options: SourceOptions = {}): string => {
+  const source = path.join(work, "source");
+  const dist = path.join(source, "frame");
   const files = { ...FILES, ...options.files };
 
   mkdirSync(path.join(dist, "assets"), { recursive: true });
 
   if (options.manifest !== null) {
-    mkdirSync(path.join(dist, ".vite"));
     writeFileSync(
-      path.join(dist, ".vite", "manifest.json"),
+      path.join(dist, "manifest.json"),
       JSON.stringify(options.manifest ?? MANIFEST),
     );
   }
@@ -108,18 +110,22 @@ const makeDist = (options: DistOptions = {}): string => {
     }
   }
 
-  return dist;
+  if (options.build !== null) {
+    writeFileSync(path.join(source, "BUILD"), options.build ?? "v9.9.9-test\n");
+  }
+
+  return source;
 };
 
-const vendor = (dist: string, out: string): SpawnSyncReturns<string> =>
-  spawnSync(process.execPath, [SCRIPT, "--dist", dist, "--out", out], {
+const vendor = (source: string, out: string): SpawnSyncReturns<string> =>
+  spawnSync(process.execPath, [SCRIPT, "--source", source, "--out", out], {
     encoding: "utf8",
   });
 
-/** Runs the vendor script on a dist and returns the frame document it wrote. */
-const frameOf = (options: DistOptions = {}): string => {
+/** Runs the vendor script on a source and returns the frame document it wrote. */
+const frameOf = (options: SourceOptions = {}): string => {
   const out = path.join(work, "frame");
-  const result = vendor(makeDist(options), out);
+  const result = vendor(makeSource(options), out);
 
   expect(result.stderr).toBe("");
   expect(result.status).toBe(0);
@@ -151,7 +157,7 @@ describe("vendor-frame.mjs", () => {
   it("writes one frame document and its build id, and nothing else", () => {
     const out = path.join(work, "frame");
 
-    expect(vendor(makeDist(), out).status).toBe(0);
+    expect(vendor(makeSource(), out).status).toBe(0);
     expect(listFiles(out)).toEqual(["BUILD", "embed.html"]);
   });
 
@@ -190,7 +196,7 @@ describe("vendor-frame.mjs", () => {
 
   it("refuses a chunk with a dynamic import, by name", () => {
     const result = vendor(
-      makeDist({
+      makeSource({
         manifest: withChunk("_index-B.js", { dynamicImports: ["src/lazy.ts"] }),
       }),
       path.join(work, "frame"),
@@ -203,7 +209,7 @@ describe("vendor-frame.mjs", () => {
 
   it("refuses a chunk that emits assets, by name", () => {
     const result = vendor(
-      makeDist({
+      makeSource({
         manifest: withChunk("_index-B.js", { assets: ["assets/font-D.woff2"] }),
       }),
       path.join(work, "frame"),
@@ -216,7 +222,7 @@ describe("vendor-frame.mjs", () => {
 
   it("refuses a stylesheet that points at a file", () => {
     const result = vendor(
-      makeDist({
+      makeSource({
         files: {
           "assets/index-C.css": '@font-face { src: url("./font-D.woff2"); }\n',
         },
@@ -230,7 +236,7 @@ describe("vendor-frame.mjs", () => {
 
   it("refuses a script holding a closing script tag", () => {
     const result = vendor(
-      makeDist({
+      makeSource({
         files: {
           "assets/index-B.js":
             'export const draw = (name) => "</script>" + name;\n',
@@ -246,7 +252,7 @@ describe("vendor-frame.mjs", () => {
 
   it("refuses a script holding an HTML comment opener", () => {
     const result = vendor(
-      makeDist({
+      makeSource({
         files: {
           "assets/index-B.js": 'export const draw = (name) => "<!--" + name;\n',
         },
@@ -262,7 +268,7 @@ describe("vendor-frame.mjs", () => {
   // An icon, a second script: whatever it is, the frame could not load it.
   it("refuses a document that names a file it does not inline", () => {
     const result = vendor(
-      makeDist({
+      makeSource({
         files: {
           "embed.html": EMBED_HTML.replace(
             "</head>",
@@ -277,19 +283,19 @@ describe("vendor-frame.mjs", () => {
     expect(result.stderr).toContain("./favicon.svg");
   });
 
-  it("without a manifest, says to build the site first", () => {
+  it("without a manifest, says to install the dependencies", () => {
     const result = vendor(
-      makeDist({ manifest: null }),
+      makeSource({ manifest: null }),
       path.join(work, "frame"),
     );
 
     expect(result.status).toBe(1);
-    expect(result.stderr).toContain("yarn build:web");
+    expect(result.stderr).toContain("npm ci");
   });
 
-  it("fails, naming a file the manifest names and dist lacks", () => {
+  it("fails, naming a file the manifest names and the package lacks", () => {
     const result = vendor(
-      makeDist({ skip: ["assets/index-C.css"] }),
+      makeSource({ skip: ["assets/index-C.css"] }),
       path.join(work, "frame"),
     );
 
@@ -298,17 +304,43 @@ describe("vendor-frame.mjs", () => {
     // the file: it names the missing file and points at the fix, before any
     // bundling work runs.
     expect(result.stderr).toContain(
-      "is missing assets/index-C.css. Rebuild it: yarn build:web",
+      "is missing assets/index-C.css. Reinstall dbml-frame: npm ci",
     );
   });
 
+  it("names the frame after the package's BUILD, not this repository", () => {
+    const out = path.join(work, "frame");
+    expect(vendor(makeSource(), out).status).toBe(0);
+    expect(readFileSync(path.join(out, "BUILD"), "utf8")).toBe("v9.9.9-test\n");
+  });
+
+  it("refuses a source without BUILD", () => {
+    const result = vendor(
+      makeSource({ build: null }),
+      path.join(work, "frame"),
+    );
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("BUILD");
+  });
+
+  it("takes its source from DBML_FRAME_SOURCE when no --source is given", () => {
+    const source = makeSource();
+    const out = path.join(work, "frame");
+    const result = spawnSync(process.execPath, [SCRIPT, "--out", out], {
+      encoding: "utf8",
+      env: { ...process.env, DBML_FRAME_SOURCE: source },
+    });
+    expect(result.status).toBe(0);
+    expect(readFileSync(path.join(out, "BUILD"), "utf8")).toBe("v9.9.9-test\n");
+  });
+
   it("leaves nothing of an earlier run behind", () => {
-    const dist = makeDist();
+    const source = makeSource();
     const out = path.join(work, "frame");
 
-    vendor(dist, out);
+    vendor(source, out);
     writeFileSync(path.join(out, "stale.js"), "stale");
-    vendor(dist, out);
+    vendor(source, out);
 
     expect(existsSync(path.join(out, "stale.js"))).toBe(false);
   });

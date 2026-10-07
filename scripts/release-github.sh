@@ -2,26 +2,24 @@
 # Releases the Obsidian plugin on GitHub: the tag Obsidian's Community plugins
 # directory reads, and the release carrying the files Obsidian installs.
 #
-#   yarn workspace obsidian-plugin release:github 0.2.0            tag, push, release
-#   yarn workspace obsidian-plugin release:github 0.2.0 --check    everything but those
+#   npm run release:github -- 0.2.0            tag, push, release
+#   npm run release:github -- 0.2.0 --check    everything but those
 #
-# Run on main once the release commit is merged (docs/releasing.md, "The
-# Obsidian plugin"). The tag is the bare version, as the directory requires,
-# on HEAD, which has to be origin/main. Attached: main.js, manifest.json and
-# styles.css, which Obsidian installs, and the zip for installing by hand. The
-# release is not marked latest: "latest" on the repository is the extension's.
+# Run on main once the release commit is merged. The tag is the bare version,
+# as the directory requires, on HEAD, which has to be origin/main. Attached:
+# main.js, manifest.json and styles.css, which Obsidian installs, and the zip
+# for installing by hand.
 #
 # A pushed tag is public at once and the directory serves the release from it,
 # so the script asks for the version to be typed back first. --check stops
 # after the build and its checks.
 set -euo pipefail
 
-REPO="AKonyshev/dbml-studio"
-PACKAGE="$(cd "$(dirname "$0")/.." && pwd)"
-ROOT="$(cd "$PACKAGE/../.." && pwd)"
+REPO="AKonyshev/obsidian-dbml-studio"
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
 usage() {
-  echo "usage: yarn workspace obsidian-plugin release:github <x.y.z> [--check]" >&2
+  echo "usage: npm run release:github -- <x.y.z> [--check]" >&2
   exit 2
 }
 
@@ -31,7 +29,7 @@ for arg in "$@"; do
   case "$arg" in
     --check) CHECK_ONLY=1 ;;
     -h | --help)
-      sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'
+      sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'
       exit 0
       ;;
     -*)
@@ -100,9 +98,9 @@ NOTES="$(awk -v v="$VERSION" '
   index($0, "## [" v "]") == 1 { on = 1; next }
   on && /^## \[/ { exit }
   on { print }
-' packages/obsidian-plugin/CHANGELOG.md)"
+' CHANGELOG.md)"
 if [ -z "$(printf '%s' "$NOTES" | tr -d '[:space:]')" ]; then
-  fail "packages/obsidian-plugin/CHANGELOG.md has no entry for $VERSION"
+  fail "CHANGELOG.md has no entry for $VERSION"
 fi
 
 if git rev-parse --quiet --verify "refs/tags/$VERSION" > /dev/null; then
@@ -115,12 +113,12 @@ if [ "$CHECK_ONLY" -eq 0 ] && ! command -v gh > /dev/null; then
   fail "the GitHub CLI (gh) is needed to create the release"
 fi
 
-# From scratch: the site, then the plugin — the frame vendored from the
-# site's build and packed into main.js — then the zip.
-yarn build:web
-yarn package:obsidian
+# From scratch: the dependencies as locked, then the plugin — the frame
+# vendored out of dbml-frame and packed into main.js — then the zip.
+npm ci
+bash scripts/package-obsidian-plugin.sh
 
-MAIN_JS="$PACKAGE/main.js"
+MAIN_JS="$ROOT/main.js"
 ZIP="$ROOT/dist/dbml-studio-obsidian-$VERSION.zip"
 
 # What a reader installs is main.js alone, so it has to carry the frame. The
@@ -140,7 +138,7 @@ node -e '
     process.exit(1);
   }
   console.log(`main.js carries frame ${build.trim()} (${code.length} bytes)`);
-' "$MAIN_JS" "$PACKAGE/frame/BUILD"
+' "$MAIN_JS" "$ROOT/frame/BUILD"
 
 # The listing is read whole first: `grep -q` stops at the first match, and
 # under pipefail the SIGPIPE that leaves `unzip` with would fail the check.
@@ -175,15 +173,14 @@ printf '%s\n' "$NOTES" > "$NOTES_FILE"
 if ! gh release create "$VERSION" \
   --repo "$REPO" \
   --verify-tag \
-  --latest=false \
   --title "DBML Studio for Obsidian $VERSION" \
   --notes-file "$NOTES_FILE" \
-  "$MAIN_JS" "$ROOT/manifest.json" "$PACKAGE/styles.css" "$ZIP"; then
+  "$MAIN_JS" "$ROOT/manifest.json" "$ROOT/styles.css" "$ZIP"; then
   fail "the tag $VERSION is pushed, but the release was not created. Finish it from the repository root:
-  gh release create $VERSION --repo $REPO --verify-tag --latest=false \\
+  gh release create $VERSION --repo $REPO --verify-tag \\
     --title \"DBML Studio for Obsidian $VERSION\" \\
-    --notes-file <the $VERSION section of packages/obsidian-plugin/CHANGELOG.md> \\
-    packages/obsidian-plugin/main.js manifest.json packages/obsidian-plugin/styles.css \\
+    --notes-file <the $VERSION section of CHANGELOG.md> \\
+    main.js manifest.json styles.css \\
     dist/dbml-studio-obsidian-$VERSION.zip"
 fi
 

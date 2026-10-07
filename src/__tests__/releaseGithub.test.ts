@@ -10,6 +10,7 @@ import {
   copyFileSync,
   mkdirSync,
   mkdtempSync,
+  readFileSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
@@ -104,7 +105,7 @@ interface RepoOptions {
 const makeRepo = (options: RepoOptions = {}): string => {
   const origin = path.join(work, "origin.git");
   const repo = path.join(work, "repo");
-  const scripts = path.join(repo, "packages", "obsidian-plugin", "scripts");
+  const scripts = path.join(repo, "scripts");
 
   git(work, "init", "--quiet", "--bare", "--initial-branch=main", origin);
   git(work, "init", "--quiet", "--initial-branch=main", repo);
@@ -118,10 +119,7 @@ const makeRepo = (options: RepoOptions = {}): string => {
     path.join(repo, "versions.json"),
     JSON.stringify(options.versions ?? { "0.2.0": "1.13.7" }),
   );
-  writeFileSync(
-    path.join(repo, "packages", "obsidian-plugin", "CHANGELOG.md"),
-    CHANGELOG,
-  );
+  writeFileSync(path.join(repo, "CHANGELOG.md"), CHANGELOG);
   git(repo, "add", ".");
   git(repo, "commit", "--quiet", "-m", "init");
   git(repo, "remote", "add", "origin", origin);
@@ -136,13 +134,7 @@ const makeRepo = (options: RepoOptions = {}): string => {
  * has no repository to act on — not even this one.
  */
 const looseScript = (): string => {
-  const scripts = path.join(
-    work,
-    "loose",
-    "packages",
-    "obsidian-plugin",
-    "scripts",
-  );
+  const scripts = path.join(work, "loose", "scripts");
 
   mkdirSync(scripts, { recursive: true });
   copyFileSync(SCRIPT, path.join(scripts, "release-github.sh"));
@@ -159,13 +151,7 @@ const release = (
     [
       repo === null
         ? looseScript()
-        : path.join(
-            repo,
-            "packages",
-            "obsidian-plugin",
-            "scripts",
-            "release-github.sh",
-          ),
+        : path.join(repo, "scripts", "release-github.sh"),
       ...args,
     ],
     { encoding: "utf8", input: "", env: isolatedEnv() },
@@ -178,6 +164,13 @@ describe("release-github.sh, its arguments", () => {
     expect(result.status).toBe(0);
     expect(result.stdout).toContain("release:github");
     expect(result.stdout).toContain("--check");
+  });
+
+  // The repository's releases are all the plugin's, so unlike in the
+  // monorepo, where the extension's own release is the one "latest" names,
+  // there is nothing here for the plugin's to step aside for.
+  it("does not mark the release as not latest: latest here is the plugin", () => {
+    expect(readFileSync(SCRIPT, "utf8")).not.toContain("--latest=false");
   });
 
   it("refuses to run without a version", () => {
