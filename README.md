@@ -12,11 +12,14 @@ In Obsidian: **Settings → Community plugins → Browse**, search for
 "DBML Studio", install it and turn it on. Obsidian keeps it up to date from
 there.
 
-By hand, for a version not in the directory yet: every release on GitHub
-(tags `0.2.0` and later) carries `dbml-studio-obsidian-<version>.zip`; unzip it
-into `<vault>/.obsidian/plugins/`, so that the folder
-`<vault>/.obsidian/plugins/dbml-studio/` holds `main.js`, and turn the plugin
-on in **Settings → Community plugins**.
+By hand, for a version not in the directory yet: download `main.js`,
+`manifest.json` and `styles.css` from its release in this repository (`0.2.4`
+and later) into `<vault>/.obsidian/plugins/dbml-studio/`, creating the folder,
+and turn the plugin on in **Settings → Community plugins**. The plugin unpacks
+its diagram frame from `main.js` on the first start. Versions `0.2.0` to
+`0.2.3` were released from DBML Studio's repository, before the plugin moved
+here: they are among
+[its releases](https://github.com/AKonyshev/dbml-studio/releases).
 
 ## What it does outside the note
 
@@ -125,15 +128,17 @@ The plugin's manifest is the repository root's `manifest.json`: the Community
 plugins directory reads it from there, and `versions.json` beside it maps each
 version to the Obsidian it needs.
 
-A release package — a zip with a `dbml-studio/` folder inside, to unzip into
-`<vault>/.obsidian/plugins/`, written to `dist/`:
+A zip for installing by hand — a `dbml-studio/` folder inside, to unzip into
+`<vault>/.obsidian/plugins/`, written to `dist/`. Built locally only; releases
+do not carry it:
 
 ```bash
 npm run package
 ```
 
-Releasing — the tag, the GitHub release and its files — is
-`npm run release:github -- <version>`; see `RELEASING.md`.
+Releasing is `npm run release:github -- <version>`, which checks the release
+and pushes its tag; GitHub Actions then builds, attests and releases it. See
+`RELEASING.md`.
 
 ### The frame
 
@@ -157,7 +162,8 @@ DBML_FRAME_SOURCE=../dbml-studio/packages/dbml-frame npm run build
 
 `node scripts/vendor-frame.mjs --source <dbml-frame package dir>` does the same
 for the vendoring step alone. A build made that way carries that frame's
-`BUILD`, and is not a release: a release is built from the pinned package.
+`BUILD`, and is not a release: a release is built from the pinned package,
+and `npm run release:github` refuses while `DBML_FRAME_SOURCE` is set.
 
 ## How it works
 
@@ -171,10 +177,13 @@ HTML and names no other file. `frame/BUILD` is the package's `BUILD`, which
 names the DBML Studio commit the frame was built from.
 
 `scripts/build-plugin.mjs` then puts both into `main.js` with esbuild's
-`define` — the document gzipped and base64-encoded (about 3.8 MB of
-`main.js`, which is 3.9 MB in all), `BUILD` as it is — and refuses to build when `frame/` is not
-there. The directory installs `main.js`, `manifest.json` and `styles.css` and
-nothing else, so the frame travels the only way it can. On load,
+`define` — the document gzipped and base64-encoded (nearly all of `main.js`,
+which is 3.9 MB), `BUILD` as it is — and refuses to build when `frame/` is not
+there. It gzips with `fflate` rather than Node's own zlib, whose output
+depends on the zlib a Node was built with: the directory rebuilds `main.js` and
+compares it with the released one, so it has to come out the same bytes on
+every Node and OS. The directory installs `main.js`, `manifest.json` and
+`styles.css` and nothing else, so the frame travels the only way it can. On load,
 `src/frameArchive.ts` compares the plugin folder's `frame/BUILD` with the
 carried one and, when it is missing or different, unpacks the document with
 the browser's own `DecompressionStream` and writes it through the vault
