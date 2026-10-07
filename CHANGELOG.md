@@ -3,7 +3,12 @@
 The Obsidian plugin's own history. The version is the root `manifest.json`'s;
 the format is [Keep a Changelog](http://keepachangelog.com/).
 
-## [Unreleased]
+## [0.2.5] - 2026-10-07
+
+### Fixed
+
+- Expanding a diagram while editing a note (Live Preview) made it disappear;
+  it covers the note's pane again.
 
 ### Changed
 
