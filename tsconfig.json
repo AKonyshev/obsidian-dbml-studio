@@ -1,11 +1,19 @@
 {
-  "extends": "../../tsconfig.json",
   "compilerOptions": {
+    "noEmit": true,
     "target": "ES2022",
     "module": "ESNext",
     "moduleResolution": "bundler",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "types": ["jest", "node"]
+    "types": ["jest", "node"],
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "skipLibCheck": true
   },
   "include": ["src/**/*.ts", "scripts/**/*.mjs"],
   "exclude": ["node_modules", "frame", "main.js"]

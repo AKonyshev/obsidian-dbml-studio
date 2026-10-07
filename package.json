@@ -1,21 +1,35 @@
 {
-  "name": "obsidian-plugin",
+  "name": "obsidian-dbml-studio",
   "version": "0.0.0",
   "private": true,
+  "description": "DBML Studio diagrams in Obsidian notes.",
   "license": "MIT",
+  "engines": {
+    "node": ">=20.19"
+  },
   "scripts": {
     "build": "node scripts/vendor-frame.mjs && node scripts/build-plugin.mjs",
-    "build:plugin": "node scripts/build-plugin.mjs",
     "vendor": "node scripts/vendor-frame.mjs",
+    "build:plugin": "node scripts/build-plugin.mjs",
+    "package": "bash scripts/package-obsidian-plugin.sh",
+    "install:vault": "bash scripts/install-obsidian-plugin.sh",
+    "release:github": "bash scripts/release-github.sh",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "jest",
-    "release:github": "bash scripts/release-github.sh"
+    "lint": "eslint .",
+    "format": "prettier --write ."
   },
   "dependencies": {
-    "web": "0.0.0"
+    "dbml-frame": "1.2.2"
   },
   "devDependencies": {
-    "esbuild": "^0.28.2",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^22.20.5",
+    "esbuild": "0.28.2",
+    "jest": "^30.5.2",
     "jest-environment-jsdom": "^30.5.2",
-    "obsidian": "^1.13.1"
+    "obsidian": "1.13.1",
+    "ts-jest": "^29.4.14",
+    "typescript": "^6.0.3"
   }
 }
